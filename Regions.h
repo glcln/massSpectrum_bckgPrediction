@@ -220,12 +220,12 @@ void Region::fill(float& eta, float& p, float& pt, float& pterr, float& ih, floa
 void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF1& f_p,TF1& f_ih,const int& fit_ih_err=1,const int& fit_p_err=1,float weight_=-1) {
 
     // Debug Fit
-    string output_dir = "/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/DebugFit_V2p18_Eta2p4/";
-    bool saveas = false;
-    string suffix = "_OldFit_inC";
+    string output_dir = "/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/DebugFit_V3p0_MET_Eta2p4/";
+    bool saveas = true;
+    string suffix = "_OldFit";
     TString outputname = output_dir+"Fits_"+st+suffix+".root";
-    //TFile* OutputHisto = new TFile(outputname,"RECREATE");
-    //OutputHisto->cd();
+    TFile* OutputHisto = new TFile(outputname,"RECREATE");
+    OutputHisto->cd();
 
 
     // Setup
@@ -270,7 +270,7 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
         if(start_fit > ih->GetBinCenter(lastBinContent)) start_fit = max_ih;
         if(st.find("ias") != std::string::npos) start_fit = 3.5;      // if ias region: gaussian fit starting at 3.5
 
-        //start_fit = 3; // for the old fit
+        start_fit = 3; // for the old fit
 
         if(useFitIh) ptr1 = ih->Fit(&f_ih, "QRSL", "", start_fit, b);       
 
@@ -310,7 +310,7 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
             d = 0.3 * p->GetBinCenter(p->GetMaximumBin());
             if (d > 25) d = 25;
 
-            //d = 30; // for the old fit
+            d = 30; // for the old fit
             
             if(useFitP) ptr2 = p->Fit(&f_p, "QRS", "", c, d);
 
@@ -796,14 +796,14 @@ void bckgEstimate(const std::string& st_sample, const std::string& dirname, cons
         float rangemax_p = 30;
         if (p_base->GetBinCenter(p_base->GetMaximumBin()) < rangemax_p) rangemax_p = 0.8 * p_base->GetBinCenter(p_base->GetMaximumBin());
         
-        /*TF1 f_p("f_p","[0]*([1]+erf((log(x)-[2])/[3]))",0,rangemax_p);  // for the old fit
+        TF1 f_p("f_p","[0]*([1]+erf((log(x)-[2])/[3]))",0,rangemax_p);  // for the old fit
         f_p.SetParLimits(0,0,9000);
         f_p.FixParameter(1,1.0);
         f_p.FixParameter(2,par_p2);
-        f_p.FixParameter(3,par_p3);*/
-        TF1 f_p ("f_p", "0.5*(exp([0]*x*x+[1]*x)+exp(-[0]*x*x-[1]*x))-1", 0, rangemax_p);
-        f_p.SetParLimits(0, 0, 1e-3);
-        f_p.SetParLimits(1, -1e-2, 1e-2);
+        f_p.FixParameter(3,par_p3);
+        //TF1 f_p ("f_p", "0.5*(exp([0]*x*x+[1]*x)+exp(-[0]*x*x-[1]*x))-1", 0, rangemax_p);
+        //f_p.SetParLimits(0, 0, 1e-3);
+        //f_p.SetParLimits(1, -1e-2, 1e-2);
 
 
         // Ih fit

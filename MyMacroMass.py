@@ -300,10 +300,10 @@ def main(argv):
     
     if(region=="8fp9" and a_==0):
         labelRegion="8fp9"
-        regSignal="VR7"
+        regSignal="VR1"
     elif(region=="8fp9" and a_!=0):
         labelRegion="8fp9"  
-        regSignal="VR7"
+        regSignal="VR1"
 
     if(region=="3fp8" and a_==0):
         labelRegion="3fp8"
@@ -393,17 +393,19 @@ def main(argv):
     idirSignalGlu = "/opt/sbg/cms/ui3_data1/gcoulon/HSCP_prod/UnblindedProd/V1p1/HSCPgluino_V1p1/"
     idirSignalStau = "/opt/sbg/cms/ui3_data1/gcoulon/HSCP_prod/UnblindedProd/V1p1/HSCPpairStau_V1p1/"
 
-    ifileGl1600=ROOT.TFile(idirSignalGlu+"HSCPgluino_M-1600_merged.root")
-    ifileGl2000=ROOT.TFile(idirSignalGlu+"HSCPgluino_M-2000_merged.root")
-    ifilePPStau557=ROOT.TFile(idirSignalStau+"HSCPpairStau_M-557_merged.root")
-    ifilePPStau871=ROOT.TFile(idirSignalStau+"HSCPpairStau_M-871_merged.root")
+    ifileGl2400 = ROOT.TFile("/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Gluino2400_massCut_0_pT70_V2p20_Gstrip_Fpix_Eta2p4_Scale.root")
+    ifileGl1600 = ROOT.TFile(idirSignalGlu+"HSCPgluino_M-1600_merged.root")
+    ifileGl2000 = ROOT.TFile(idirSignalGlu+"HSCPgluino_M-2000_merged.root")
+    ifilePPStau557 = ROOT.TFile(idirSignalStau+"HSCPpairStau_M-557_merged.root")
+    ifilePPStau871 = ROOT.TFile(idirSignalStau+"HSCPpairStau_M-871_merged.root")
 
     ntupleDir = "HSCParticleAnalyzer/BaseName/"
 
-    m_Gl1600=ifileGl1600.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
-    m_Gl2000=ifileGl2000.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
-    m_ppStau557=ifilePPStau557.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
-    m_ppStau871=ifilePPStau871.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
+    m_Gl2400 = ifileGl2400.Get("mass_regionD_"+region+"_ReRunRaph")
+    m_Gl1600 = ifileGl1600.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
+    m_Gl2000 = ifileGl2000.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
+    m_ppStau557 = ifilePPStau557.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
+    m_ppStau871 = ifilePPStau871.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
 
 
     # -------------- Work on histograms --------------
@@ -438,12 +440,14 @@ def main(argv):
     elif(year=="zjets"): CMS_lumi.lumi_13TeV = "Z+jets - 101 fb^{-1}"
 
 
+    m_Gl2400.Scale(normSignal)
     m_Gl1600.Scale(normSignal)
     m_Gl2000.Scale(normSignal)
     m_ppStau557.Scale(normSignal)
     m_ppStau871.Scale(normSignal)
 
     if(doRebin==True):
+        m_Gl2400=m_Gl2400.Rebin(sizeRebinning,"Gl2400_new",rebinning)
         m_Gl1600=m_Gl1600.Rebin(sizeRebinning,"Gl1600_new",rebinning)
         m_Gl2000=m_Gl2000.Rebin(sizeRebinning,"Gl2000_new",rebinning)
         m_ppStau557=m_ppStau557.Rebin(sizeRebinning,"ppStau557_new",rebinning)
@@ -456,8 +460,8 @@ def main(argv):
     if(region=="80ias90"): regionSyst="90ias100"
     if(region=="50ias90"): regionSyst="90ias100"
     if("fp" in region): regionSyst="90ias100"
-    if(region=="8fp9"): regionSyst="8fp9"
-    yearSyst=year
+    if(region=="8fp9" and not ("MET" in inputfile)): regionSyst="8fp9"
+    yearSyst = year
     if(year=="2017_2018"): yearSyst="2018"
 
 
@@ -510,17 +514,19 @@ def main(argv):
     underflowAndOverflow(pred, False, max_mass) 
     underflowAndOverflow(pred_noSyst, False, max_mass) 
 
+    h_syst_gl2400 = ROOT.TFile("systSignal/Gluino_M-2400/SR1_73p0/_sysTot.root").Get("c1_n4").GetPrimitive("")
+    h_syst_gl1600 = ROOT.TFile("systSignal/Gluino_M-1600/SR1_73p0/_sysTot.root").Get("c1_n5").GetPrimitive("")
+    h_syst_gl2000 = ROOT.TFile("systSignal/Gluino_M-2000/SR1_73p0/_sysTot.root").Get("c1_n9").GetPrimitive("")
+    h_syst_ppStau557 = ROOT.TFile("systSignal/ppStau_M-557/SR1_73p0/_sysTot.root").Get("c1_n11").GetPrimitive("")
+    h_syst_ppStau871 = ROOT.TFile("systSignal/ppStau_M-871/SR1_73p0/_sysTot.root").Get("c1_n14").GetPrimitive("")
 
-    h_syst_gl1600=ROOT.TFile("systSignal/Gluino_M-1600/SR1_73p0/_sysTot.root").Get("c1_n5").GetPrimitive("")
-    h_syst_gl2000=ROOT.TFile("systSignal/Gluino_M-2000/SR1_73p0/_sysTot.root").Get("c1_n9").GetPrimitive("")
-    h_syst_ppStau557=ROOT.TFile("systSignal/ppStau_M-557/SR1_73p0/_sysTot.root").Get("c1_n11").GetPrimitive("")
-    h_syst_ppStau871=ROOT.TFile("systSignal/ppStau_M-871/SR1_73p0/_sysTot.root").Get("c1_n14").GetPrimitive("")
+    m_Gl2400 = addHSystSignal(m_Gl2400,h_syst_gl2400)
+    m_Gl1600 = addHSystSignal(m_Gl1600,h_syst_gl1600)    
+    m_Gl2000 = addHSystSignal(m_Gl2000,h_syst_gl2000)  
+    m_ppStau557 = addHSystSignal(m_ppStau557,h_syst_ppStau557)    
+    m_ppStau871 = addHSystSignal(m_ppStau871,h_syst_ppStau871)    
 
-    m_Gl1600=addHSystSignal(m_Gl1600,h_syst_gl1600)    
-    m_Gl2000=addHSystSignal(m_Gl2000,h_syst_gl2000)  
-    m_ppStau557=addHSystSignal(m_ppStau557,h_syst_ppStau557)    
-    m_ppStau871=addHSystSignal(m_ppStau871,h_syst_ppStau871)    
-
+    underflowAndOverflow(m_Gl2400, False, max_mass)
     underflowAndOverflow(m_Gl1600, False, max_mass)
     underflowAndOverflow(m_Gl2000, False, max_mass)
     underflowAndOverflow(m_ppStau557, False, max_mass)
@@ -529,6 +535,7 @@ def main(argv):
     listOfMarkerGluino = [21, 22, 29, 23, 33, 34, 39, 47, 43]
     listOfMarkePPStau = [21, 22, 29, 23, 33, 34, 39, 47, 43, 44]
 
+    m_Gl2400 = setColorAndMarker(m_Gl2400,46,listOfMarkerGluino[4])
     m_Gl1600 = setColorAndMarker(m_Gl1600,28,listOfMarkerGluino[2])
     m_Gl2000 = setColorAndMarker(m_Gl2000,46,listOfMarkerGluino[4])
     m_ppStau557 = setColorAndMarker(m_ppStau557,8,listOfMarkePPStau[3])
@@ -556,6 +563,7 @@ def main(argv):
         pred = binWidth(pred)
         C_mass = binWidth(C_mass)
         pred_noSyst = binWidth(pred_noSyst)
+        m_Gl2400 = binWidth(m_Gl2400)
         m_Gl1600 = binWidth(m_Gl1600)
         m_Gl2000 = binWidth(m_Gl2000)
         m_ppStau557 = binWidth(m_ppStau557)
@@ -682,7 +690,8 @@ def main(argv):
         obs.SetMarkerStyle(23)
     if(blind==False):
         obs.Draw("same E1")
-        if (region == "8fp9" and not ("NoC" in outputfile)): C_mass.Draw("same E1")
+        if (region == "8fp9"): m_Gl2400.Draw("same E1")
+        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): C_mass.Draw("same E1")
 
     obs.SaveAs(odir+'/obs.root')
     
@@ -708,11 +717,11 @@ def main(argv):
         
         if (region=="3fp8"): leg.AddEntry(obs,"Observed in C","PE1")
         else: leg.AddEntry(obs,"Observed","PE1")
-        if (region == "8fp9" and not ("NoC" in outputfile) ): leg.AddEntry(C_mass,"Observed in C","PE1")
+        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): leg.AddEntry(C_mass,"Observed in C","PE1")
     elif(blind==False and isData==True):
         if (region=="3fp8"): leg.AddEntry(obs,"Observed in C","PE1")
         else: leg.AddEntry(obs,"Observed","PE1")
-        if (region == "8fp9" and not ("NoC" in outputfile)): leg.AddEntry(C_mass,"Observed in C","PE1")
+        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): leg.AddEntry(C_mass,"Observed in C","PE1")
     if(a_==0):
         if(biasCorr==True):
             if(isData==True):
@@ -736,6 +745,7 @@ def main(argv):
         else:
             leg.AddEntry(pred_leg,"Pred. w/ bias corr.","PF")
 
+    if (region == "8fp9"): leg.AddEntry(m_Gl2400,"#tilde{g} (M=2400 GeV)","PE1")
     if(signal==True):
         leg.AddEntry(m_Gl1600,"#tilde{g} (M=1600 GeV)","PE1")
         leg.AddEntry(m_Gl2000,"#tilde{g} (M=2000 GeV)","PE1")
@@ -807,7 +817,7 @@ def main(argv):
         ratioInt.SetMarkerStyle(23)
     if(blind==False):
         ratioInt.Draw("same E0")
-        if (region == "8fp9" and not ("NoC" in outputfile)): ratioIntC.Draw("same E0")
+        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): ratioIntC.Draw("same E0")
     LineAtOne.Draw("same")
 
 
@@ -857,7 +867,7 @@ def main(argv):
     f=None
     if(blind==False):
         ratioSimpleH.Draw("same E0")
-        if (region == "8fp9" and not ("NoC" in outputfile)): ratio_massC_obs.Draw("same E0")
+        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): ratio_massC_obs.Draw("same E0")
     #ratioSimpleH.Draw("same E0")
     if(a_==0):
         ratioSimpleH.Fit("pol1","RSQ0","same",50,250)
@@ -909,7 +919,7 @@ def main(argv):
 
     if(blind==False):
         pull.Draw("same HIST")
-        if (region == "8fp9" and not ("NoC" in outputfile)): pullC.Draw("same HIST")
+        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): pullC.Draw("same HIST")
 
     pull.SetLineColor(1)
     pull.SetFillColor(38)

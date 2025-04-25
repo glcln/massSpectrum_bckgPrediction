@@ -6,15 +6,6 @@ parser = OptionParser(usage="Usage: python %prog codeVersion")
 (opt,args) = parser.parse_args()
 
 datasetList=[
-    #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p12_Gstrip_Eta2p4"
-    #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p12_Gstrip_Eta1"
-    #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p12_Gstrip_Eta1_2p4"
-    #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p12_Fpix_Eta2p4"
-    #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p12_Fpix_Eta1"
-    #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p12_Fpix_Eta1_2p4"
-    #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p12_Fpix_Eta2p4"
-    #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p13_Gstrip_Eta1_2p4"
-    
     #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p14_Fpix_Eta2p4"
     #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p14_Fpix_Eta1_2p4"
     #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p14_Fpix_Eta1"
