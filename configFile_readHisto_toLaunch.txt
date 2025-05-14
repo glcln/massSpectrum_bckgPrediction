@@ -1,1 +1,1 @@
-/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/MET_2017_2018_massCut_0_pT70_V3p1_Fpix_Eta2p4      data2018        /opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/todelete       200     3    1    4      4     2    1     0      0     1   1
+/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/MET_2017_2018_massCut_0_pT70_V3p2_Fpix_Eta2p4      data2018        /opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/todelete       200     3    1    8      8     16    1     0      0     1   1

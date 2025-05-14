@@ -13,7 +13,7 @@ datasetList=[
     #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p14_Gstrip_Eta1_2p4"
     #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p14_Gstrip_Eta1"
 
-    "\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/MET_2017_2018_massCut_0_pT70_V3p1_Fpix_Eta2p4"
+    "\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/MET_2017_2018_massCut_0_pT70_V3p2_Fpix_Eta2p4"
 
 
     #"\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/HSCP_prod\/SingleMuon\/2018\/SingleMuon_2018_merged" #data2018
@@ -29,7 +29,8 @@ nPE="200"
 
 #[label, rebinEta, rebinIh, rebinMom, corrTemplateIh, corrTemplateMom, fitIh, fitMom]
 config=[
-    ["nominal", "4", "4", "2", "0", "0", "1", "1"],
+    ["nominal", "8", "8", "16", "0", "0", "1", "1"],
+    #["nominal", "4", "4", "2", "0", "0", "1", "1"],
     #["etaup", "2", "4", "2", "0", "0", "1", "1"],
     #["etadown", "8", "4", "2", "0", "0", "1", "1"],
     #["ihup", "4", "2", "2", "0", "0", "1", "1"],   

@@ -20,8 +20,8 @@ a_ = 0
 b_ = 1
 
 #year='2017'
-year='2018'
-#year='2017_2018'
+#year='2018'
+year='2017_2018'
 #year='ttbarwjets'
 #year='wjets'
 #year='ttbar'
@@ -128,8 +128,11 @@ def binWidth(h1):
     return res
 
 def ratioHisto(h1,h2):
-    h3=h1.Clone()
+    h3 = h1.Clone()
+    h3.Sumw2()
+    h2.Sumw2()
     h3.Divide(h2)
+
     return h3
 
 def ratioIntegral(h1,h2,systErr,upTo=-1):
@@ -380,11 +383,12 @@ def main(argv):
     signal = False
 
     ifile = ROOT.TFile(inputfile)
+    ext = "OnlyMET"
     
     obs = ifile.Get("mass_obs_"+region)
     pred = ifile.Get("mass_predBC_"+region)
-    if (region=="80ias90"): C_mass = ifile.Get("mass_regionC_ias50_ReRunRaph")
-    elif (region=="8fp9"): C_mass = ifile.Get("mass_regionC_3fp8_ReRunRaph")
+    if (region=="80ias90"): C_mass = ifile.Get("mass_regionC_ias50_" + ext)
+    elif (region=="8fp9"): C_mass = ifile.Get("mass_regionC_3fp8_" + ext)
     else: C_mass = ifile.Get("mass_obs_"+region)
     pred_noSyst = addSyst(pred,0.0)
 
@@ -395,15 +399,17 @@ def main(argv):
 
     ifileGl2400 = ROOT.TFile("/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Gluino2400_massCut_0_pT70_V2p20_Gstrip_Fpix_Eta2p4_Scale.root")
     ifileGl1600 = ROOT.TFile(idirSignalGlu+"HSCPgluino_M-1600_merged.root")
-    ifileGl2000 = ROOT.TFile(idirSignalGlu+"HSCPgluino_M-2000_merged.root")
+    ifileGl2000 = ROOT.TFile("/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Gluino2000_massCut_0_pT70_V2p23_Gstrip_Fpix_Eta2p4_Scale.root")
     ifilePPStau557 = ROOT.TFile(idirSignalStau+"HSCPpairStau_M-557_merged.root")
     ifilePPStau871 = ROOT.TFile(idirSignalStau+"HSCPpairStau_M-871_merged.root")
 
     ntupleDir = "HSCParticleAnalyzer/BaseName/"
 
-    m_Gl2400 = ifileGl2400.Get("mass_regionD_"+region+"_ReRunRaph")
+    PlotSignal = False
+
+    m_Gl2400 = ifileGl2400.Get("mass_regionD_"+region+"_" + ext)
     m_Gl1600 = ifileGl1600.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
-    m_Gl2000 = ifileGl2000.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
+    m_Gl2000 = ifileGl2000.Get("mass_regionD_"+region+"_SingleMu")
     m_ppStau557 = ifilePPStau557.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
     m_ppStau871 = ifilePPStau871.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
 
@@ -413,6 +419,8 @@ def main(argv):
 
     #rebinning=array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.])
     rebinning=array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
+    #rebinning=array.array('d',[0.,40.,80.,120.,160.,200.,240.,280.,320.,360.,420.,480.,540.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
+
 
     sizeRebinning=len(rebinning)-1
     
@@ -426,7 +434,8 @@ def main(argv):
     if(year=="2017_2018"):
         normSignal=1
         #CMS_lumi.lumi_13TeV = "2017+2018 - 101 fb^{-1}"
-        CMS_lumi.lumi_13TeV = "101 fb^{-1}"
+        CMS_lumi.lumi_13TeV = "78.37 fb^{-1}"
+        #CMS_lumi.lumi_13TeV = ""
 
     if(year=="2018"):
         normSignal=59.7/101
@@ -440,16 +449,18 @@ def main(argv):
     elif(year=="zjets"): CMS_lumi.lumi_13TeV = "Z+jets - 101 fb^{-1}"
 
 
-    m_Gl2400.Scale(normSignal)
+    if (PlotSignal):
+        m_Gl2400.Scale(normSignal)
+        m_Gl2000.Scale(normSignal)
     m_Gl1600.Scale(normSignal)
-    m_Gl2000.Scale(normSignal)
     m_ppStau557.Scale(normSignal)
     m_ppStau871.Scale(normSignal)
 
     if(doRebin==True):
-        m_Gl2400=m_Gl2400.Rebin(sizeRebinning,"Gl2400_new",rebinning)
+        if (PlotSignal):
+            m_Gl2400=m_Gl2400.Rebin(sizeRebinning,"Gl2400_new",rebinning)
+            m_Gl2000=m_Gl2000.Rebin(sizeRebinning,"Gl2000_new",rebinning)
         m_Gl1600=m_Gl1600.Rebin(sizeRebinning,"Gl1600_new",rebinning)
-        m_Gl2000=m_Gl2000.Rebin(sizeRebinning,"Gl2000_new",rebinning)
         m_ppStau557=m_ppStau557.Rebin(sizeRebinning,"ppStau557_new",rebinning)
         m_ppStau871=m_ppStau871.Rebin(sizeRebinning,"ppStau871_new",rebinning)
 
@@ -465,12 +476,14 @@ def main(argv):
     if(year=="2017_2018"): yearSyst="2018"
 
 
-    ifileSyst=ROOT.TFile("systBckg/sysTotBinned_"+yearSyst+"_"+regionSyst+".root")
-    histoOfSyst=ifileSyst.Get("systTotalBinned")
+    ifileSyst = ROOT.TFile("systBckg/sysTotBinned_"+yearSyst+"_"+regionSyst+".root")
+    if(region=="8fp9" and ("MET" in inputfile)): ifileSyst = ROOT.TFile("systBckg/sysTotBinned_2017_2018_8fp9_MET.root")
+    if(region=="8fp9" and ("OnlyMET" in inputfile)): ifileSyst = ROOT.TFile("systBckg/sysTotBinned_2017_2018_8fp9_OnlyMET.root")
+    histoOfSyst = ifileSyst.Get("systTotalBinned")
 
-    pred_noCorrBias=pred.Clone()
-    pred_noBlind=pred.Clone("_prednoBlind")
-    obs_noBlind=obs.Clone("_obsnoBlind")
+    pred_noCorrBias = pred.Clone()
+    pred_noBlind = pred.Clone("_prednoBlind")
+    obs_noBlind = obs.Clone("_obsnoBlind")
 
     biasCorr = False
     if(a_==0):
@@ -520,24 +533,27 @@ def main(argv):
     h_syst_ppStau557 = ROOT.TFile("systSignal/ppStau_M-557/SR1_73p0/_sysTot.root").Get("c1_n11").GetPrimitive("")
     h_syst_ppStau871 = ROOT.TFile("systSignal/ppStau_M-871/SR1_73p0/_sysTot.root").Get("c1_n14").GetPrimitive("")
 
-    m_Gl2400 = addHSystSignal(m_Gl2400,h_syst_gl2400)
+    if (PlotSignal):
+        m_Gl2400 = addHSystSignal(m_Gl2400,h_syst_gl2400)
+        m_Gl2000 = addHSystSignal(m_Gl2000,h_syst_gl2000)  
     m_Gl1600 = addHSystSignal(m_Gl1600,h_syst_gl1600)    
-    m_Gl2000 = addHSystSignal(m_Gl2000,h_syst_gl2000)  
     m_ppStau557 = addHSystSignal(m_ppStau557,h_syst_ppStau557)    
     m_ppStau871 = addHSystSignal(m_ppStau871,h_syst_ppStau871)    
 
-    underflowAndOverflow(m_Gl2400, False, max_mass)
+    if (PlotSignal):
+        underflowAndOverflow(m_Gl2400, False, max_mass)
+        underflowAndOverflow(m_Gl2000, False, max_mass)
     underflowAndOverflow(m_Gl1600, False, max_mass)
-    underflowAndOverflow(m_Gl2000, False, max_mass)
     underflowAndOverflow(m_ppStau557, False, max_mass)
     underflowAndOverflow(m_ppStau871, False, max_mass)
 
     listOfMarkerGluino = [21, 22, 29, 23, 33, 34, 39, 47, 43]
     listOfMarkePPStau = [21, 22, 29, 23, 33, 34, 39, 47, 43, 44]
 
-    m_Gl2400 = setColorAndMarker(m_Gl2400,46,listOfMarkerGluino[4])
+    if (PlotSignal):
+        m_Gl2400 = setColorAndMarker(m_Gl2400,46,listOfMarkerGluino[4])
+        m_Gl2000 = setColorAndMarker(m_Gl2000,28,listOfMarkerGluino[2])
     m_Gl1600 = setColorAndMarker(m_Gl1600,28,listOfMarkerGluino[2])
-    m_Gl2000 = setColorAndMarker(m_Gl2000,46,listOfMarkerGluino[4])
     m_ppStau557 = setColorAndMarker(m_ppStau557,8,listOfMarkePPStau[3])
     m_ppStau871 = setColorAndMarker(m_ppStau871,31,listOfMarkePPStau[6])
 
@@ -563,9 +579,10 @@ def main(argv):
         pred = binWidth(pred)
         C_mass = binWidth(C_mass)
         pred_noSyst = binWidth(pred_noSyst)
-        m_Gl2400 = binWidth(m_Gl2400)
+        if (PlotSignal):
+            m_Gl2400 = binWidth(m_Gl2400)
+            m_Gl2000 = binWidth(m_Gl2000)
         m_Gl1600 = binWidth(m_Gl1600)
-        m_Gl2000 = binWidth(m_Gl2000)
         m_ppStau557 = binWidth(m_ppStau557)
         m_ppStau871 = binWidth(m_ppStau871)
 
@@ -690,7 +707,9 @@ def main(argv):
         obs.SetMarkerStyle(23)
     if(blind==False):
         obs.Draw("same E1")
-        if (region == "8fp9"): m_Gl2400.Draw("same E1")
+        if (region == "8fp9" and PlotSignal):
+            m_Gl2400.Draw("same E1")
+            m_Gl2000.Draw("same E1")
         if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): C_mass.Draw("same E1")
 
     obs.SaveAs(odir+'/obs.root')
@@ -745,7 +764,9 @@ def main(argv):
         else:
             leg.AddEntry(pred_leg,"Pred. w/ bias corr.","PF")
 
-    if (region == "8fp9"): leg.AddEntry(m_Gl2400,"#tilde{g} (M=2400 GeV)","PE1")
+    if (region == "8fp9" and PlotSignal):
+        leg.AddEntry(m_Gl2400,"#tilde{g} (M=2400 GeV)","PE1")
+        leg.AddEntry(m_Gl2000,"#tilde{g} (M=2000 GeV)","PE1")
     if(signal==True):
         leg.AddEntry(m_Gl1600,"#tilde{g} (M=1600 GeV)","PE1")
         leg.AddEntry(m_Gl2000,"#tilde{g} (M=2000 GeV)","PE1")

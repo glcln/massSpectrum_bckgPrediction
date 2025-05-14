@@ -367,55 +367,60 @@ def BiasCorrection(h1,a_,b_):
 
 
 # Setup
-directory = "/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Fpix_V2p18/"
-year = "2018"
+version = "V3p2"
+directory = "/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Fpix_"+version+"/"
+year = "2017_2018"
 region = "8fp9"
 plotType = "mass_predBC_"
-oDir = "/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Fpix_V2p18/SystCombined/"
-ofile = TFile(oDir+"sysToTBinned_2018_"+region+".root","RECREATE")
+oDir = "/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Fpix_"+version+"/SystCombined/"
+ofile = TFile(oDir+"sysToTBinned_"+year+"_"+region+".root","RECREATE")
 outTitle = "syst"
 labelRegion = region
+sample = "MET_2017_2018"
 
 
-inputNominal = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_EtaReweighting.root"
+
+
+inputNominal = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_EtaReweighting.root"
 ifileNominal = TFile(inputNominal)
 
-inputEtaD = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta2_rebinIh4_rebinP2_rebinMass1_EtaReweighting.root"
-inputEtaU = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta8_rebinIh4_rebinP2_rebinMass1_EtaReweighting.root"
+inputEtaD = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta2_rebinIh4_rebinP2_rebinMass1_EtaReweighting.root"
+inputEtaU = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta8_rebinIh4_rebinP2_rebinMass1_EtaReweighting.root"
 ifileEtaD = TFile(inputEtaD)
 ifileEtaU = TFile(inputEtaU)
 
-inputIhD = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh2_rebinP2_rebinMass1_EtaReweighting.root"
-inputIhU = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh8_rebinP2_rebinMass1_EtaReweighting.root"
+inputIhD = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh2_rebinP2_rebinMass1_EtaReweighting.root"
+inputIhU = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh8_rebinP2_rebinMass1_EtaReweighting.root"
 ifileIhD = TFile(inputIhD)
 ifileIhU = TFile(inputIhU)
 
-inputPD = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP1_rebinMass1_EtaReweighting.root"
-inputPU = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP4_rebinMass1_EtaReweighting.root"
+inputPD = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP1_rebinMass1_EtaReweighting.root"
+inputPU = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP4_rebinMass1_EtaReweighting.root"
 ifilePD = TFile(inputPD)
 ifilePU = TFile(inputPU)
 
-inputCorrDeDxDown = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_corrTemplateIh_EtaReweighting.root"
-inputCorrDeDxUp = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_corrTemplateIh_EtaReweighting.root"
+inputCorrDeDxDown = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_corrTemplateIh_EtaReweighting.root"
+inputCorrDeDxUp = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_corrTemplateIh_EtaReweighting.root"
 ifileCorrDeDxDown = TFile(inputCorrDeDxDown)
 ifileCorrDeDxUp = TFile(inputCorrDeDxUp)
 
-inputCorrPDown = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_corrTemplateP_EtaReweighting.root"
-inputCorrPUp = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_corrTemplateP_EtaReweighting.root"
-ifileCorrPDown = TFile(inputCorrPDown)
-ifileCorrPUp = TFile(inputCorrPUp)
+#inputCorrPDown = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_corrTemplateP_EtaReweighting.root"
+#inputCorrPUp = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_corrTemplateP_EtaReweighting.root"
+#ifileCorrPDown = TFile(inputCorrPDown)
+#ifileCorrPUp = TFile(inputCorrPUp)
 
-inputFitPUp = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_fitPUp_EtaReweighting.root"
-inputFitPDown = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_fitPDown_EtaReweighting.root"
+inputFitPUp = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_fitPUp_EtaReweighting.root"
+inputFitPDown = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_fitPDown_EtaReweighting.root"
 ifileFitPUp = TFile(inputFitPUp)
 ifileFitPDown = TFile(inputFitPDown)
 
-inputFitDeDxUp = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_fitIhUp_EtaReweighting.root"
-inputFitDeDxDown = directory + "Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_fitIhDown_EtaReweighting.root"
+inputFitDeDxUp = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_fitIhUp_EtaReweighting.root"
+inputFitDeDxDown = directory + sample+"_massCut_0_pT70_"+version+"_Fpix_Eta2p4_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_fitIhDown_EtaReweighting.root"
 ifileFitDeDxUp = TFile(inputFitDeDxUp)
 ifileFitDeDxDown = TFile(inputFitDeDxDown)
 
 
+print(inputNominal)
 
 # Compute the systematics
 predNominal_def = ifileNominal.Get(plotType+region)
@@ -432,8 +437,8 @@ predPU = ifilePU.Get(plotType+region)
 predCorrDeDxDown = ifileCorrDeDxDown.Get(plotType+region)
 predCorrDeDxUp = ifileCorrDeDxUp.Get(plotType+region)
 
-predCorrPDown = ifileCorrPDown.Get(plotType+region)
-predCorrPUp = ifileCorrPUp.Get(plotType+region)
+#predCorrPDown = ifileCorrPDown.Get(plotType+region)
+#predCorrPUp = ifileCorrPUp.Get(plotType+region)
 
 predFitPUp = ifileFitPUp.Get(plotType+region)
 predFitPDown = ifileFitPDown.Get(plotType+region)
@@ -467,9 +472,9 @@ predCorrDeDxNominal = allSet(predNominal_def,sizeRebinning,rebinning,"corrdedx_n
 predCorrDeDxDown = allSet(predCorrDeDxDown,sizeRebinning,rebinning,"corrdedx_down")
 predCorrDeDxUp = allSet(predCorrDeDxUp,sizeRebinning,rebinning,"corrdedx_up")
 
-predCorrPNominal = allSet(predNominal_def,sizeRebinning,rebinning,"corrP_nominal")
-predCorrPDown = allSet(predCorrPDown,sizeRebinning,rebinning,"corrP_down")
-predCorrPUp = allSet(predCorrPUp,sizeRebinning,rebinning,"corrP_up")
+#predCorrPNominal = allSet(predNominal_def,sizeRebinning,rebinning,"corrP_nominal")
+#predCorrPDown = allSet(predCorrPDown,sizeRebinning,rebinning,"corrP_down")
+#predCorrPUp = allSet(predCorrPUp,sizeRebinning,rebinning,"corrP_up")
 
 predFitPNominal = allSet(predNominal_def,sizeRebinning,rebinning,"fitP_nominal")
 predFitPDown = allSet(predFitPDown,sizeRebinning,rebinning,"fitP_down")
@@ -486,7 +491,7 @@ predFitDeDxUp = allSet(predFitDeDxUp,sizeRebinning,rebinning,"fitDeDx_up")
 (syst_p, syst_p_mean, syst_p_binned, syst_p_binned_mean) = systMassAll(predPNominal,predPD,predPU,"P")
 
 (syst_corrDeDx, syst_corrDeDx_mean, syst_corrDeDx_binned, syst_corrDeDx_binned_mean) = systMassAll(predCorrDeDxNominal,predCorrDeDxDown,predCorrDeDxUp,"corrDeDx")
-(syst_corrP, syst_corrP_mean, syst_corrP_binned, syst_corrP_binned_mean) = systMassAll(predCorrPNominal,predCorrPDown,predCorrPUp,"corrP")
+#(syst_corrP, syst_corrP_mean, syst_corrP_binned, syst_corrP_binned_mean) = systMassAll(predCorrPNominal,predCorrPDown,predCorrPUp,"corrP")
 
 (syst_fitP, syst_fitP_mean, syst_fitP_binned, syst_fitP_binned_mean) = systMassAll(predFitPNominal,predFitPDown,predFitPUp,"Fit_p")
 (syst_fitDeDx, syst_fitDeDx_mean, syst_fitDeDx_binned, syst_fitDeDx_binned_mean) = systMassAll(predFitDeDxNominal,predFitDeDxDown,predFitDeDxUp,"Fit_dedx_systMassAl")
@@ -499,17 +504,17 @@ syst_eta.Write()
 syst_ih.Write()
 syst_p.Write()
 syst_corrDeDx.Write()
-syst_corrP.Write()
+#syst_corrP.Write()
 syst_fitDeDx.Write()
 syst_fitDeDx_binned.Write()
 
-listOfSyst = [syst_stat,syst_eta,syst_ih,syst_p,syst_corrDeDx,syst_corrP,syst_fitDeDx,syst_fitP]
+listOfSyst = [syst_stat,syst_eta,syst_ih,syst_p,syst_corrDeDx,syst_fitDeDx,syst_fitP] #syst_corrP
 sysTot = systTotal(listOfSyst)
 sysTot.SetName("systTotal")
 sysTot.Write()
 sysTot.SaveAs(oDir+"sysTot.root")
 
-listOfSyst_binned = [syst_stat_binned,syst_eta_binned,syst_ih_binned,syst_p_binned,syst_corrDeDx_binned,syst_corrP_binned,syst_fitDeDx_binned,syst_fitP_binned]
+listOfSyst_binned = [syst_stat_binned,syst_eta_binned,syst_ih_binned,syst_p_binned,syst_corrDeDx_binned,syst_fitDeDx_binned,syst_fitP_binned] #syst_corrP_binned
 sysTot_binned = systTotal(listOfSyst_binned)
 sysTot_binned.SetName("systTotalBinned")
 sysTot_binned.Write()

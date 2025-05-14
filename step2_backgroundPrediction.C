@@ -58,7 +58,7 @@ void step2_backgroundPrediction(){
     TFile* ifile = new TFile((filename+".root").c_str());
     TFile* ofile = new TFile((outfilename_+".root").c_str(),"RECREATE");
 
-    std::string Ext = "_ReRunRaph";
+    std::string Ext = "_OnlyMET";
     
     // ------------------------------------------------------------------
     //                              If Gstrip

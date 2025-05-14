@@ -220,12 +220,12 @@ void Region::fill(float& eta, float& p, float& pt, float& pterr, float& ih, floa
 void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF1& f_p,TF1& f_ih,const int& fit_ih_err=1,const int& fit_p_err=1,float weight_=-1) {
 
     // Debug Fit
-    string output_dir = "/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/DebugFit_V3p0_MET_Eta2p4/";
-    bool saveas = true;
-    string suffix = "_OldFit";
+    string output_dir = "/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/DebugFit_V3p2_OnlyMET_Eta2p4/";
+    bool saveas = false;
+    string suffix = "_NewFit";
     TString outputname = output_dir+"Fits_"+st+suffix+".root";
-    TFile* OutputHisto = new TFile(outputname,"RECREATE");
-    OutputHisto->cd();
+    //TFile* OutputHisto = new TFile(outputname,"RECREATE");
+    //OutputHisto->cd();
 
 
     // Setup
@@ -247,8 +247,8 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
     for(int i=1;i<eta->GetNbinsX()+1;i++)
     {
         // Setup
-        useFitIh = true;
-        useFitP = true;
+        useFitIh = false;
+        useFitP = false;
         TH1F* p = (TH1F*) eta_p->ProjectionX("proj_p",i,i,"e");
         TH1F* ih = (TH1F*) ih_eta->ProjectionY("proj_ih",i,i,"e");
 
@@ -270,9 +270,11 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
         if(start_fit > ih->GetBinCenter(lastBinContent)) start_fit = max_ih;
         if(st.find("ias") != std::string::npos) start_fit = 3.5;      // if ias region: gaussian fit starting at 3.5
 
-        start_fit = 3; // for the old fit
+        //start_fit = 3; // for the old fit
 
-        if(useFitIh) ptr1 = ih->Fit(&f_ih, "QRSL", "", start_fit, b);       
+        //if(useFitIh) ptr1 = ih->Fit(&f_ih, "QRSL", "", start_fit, b);       
+        ptr1 = ih->Fit(&f_ih, "QRSL", "", start_fit, b);       
+
 
         if(ptr1->Status()!=0){                  // Bad fit
             if(saveas) ih->Write();
@@ -310,18 +312,18 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
             d = 0.3 * p->GetBinCenter(p->GetMaximumBin());
             if (d > 25) d = 25;
 
-            d = 30; // for the old fit
+            //d = 30; // for the old fit
             
-            if(useFitP) ptr2 = p->Fit(&f_p, "QRS", "", c, d);
-
+            //if(useFitP) ptr2 = p->Fit(&f_p, "QRS", "", c, d);
+            ptr2 = p->Fit(&f_p, "QRS", "", c, d);
 
             TF1* f_p2 = &f_p;
             
             float intFp=1;
-            if(useFitP){ 
+            //if(useFitP){ 
                 ROOT::Math::IntegratorOneDim intOneDim_p(*f_p2,ROOT::Math::IntegrationOneDim::kGAUSS);
                 intFp = intOneDim_p.Integral(c,d);
-            }
+            //}
             if(intFp <= 0) std::cout<<"ERROR > INTEGRAL FIT P IS <= 0. ITG = " << intFp <<std::endl;
 
 
@@ -330,7 +332,11 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
             SFp = intP/intFp;
             f_p3 = f_p2;
             
-            statusFit = ptr2->Status();
+            if (ptr2.Get()) statusFit = ptr2->Status();
+            else {
+                std::cerr << "WARNING: Fit failed and returned null TFitResultPtr" << std::endl;
+                statusFit = 999; // valeur arbitraire pour indiquer un échec
+            }
         }
 
         if( statusFit != 0 ){                  // Bad fit
@@ -346,8 +352,8 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
 
         // ------------- If false: no fit -------------
 
-                    //useFitIh = false;
-                    //useFitP = false;
+                    useFitIh = false;
+                    useFitP = false;
 
         // --------------------------------------------
 
@@ -406,7 +412,7 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
                                 bin_mass = pred_mass->FindBin(mass);
                                 pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
                                 pred_mass_eta->SetBinContent(i,bin_mass,pred_mass_eta->GetBinContent(i,bin_mass)+weight);
-                                if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN !!" << std::endl;
+                                if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN ! 1" << std::endl;
 
                                 pred_mass_fitIh_fitP->SetBinContent(bin_mass,pred_mass_fitIh_fitP->GetBinContent(bin_mass)+weight);
                                 ih_p_cross1D_fit->SetBinContent(j,k,ih_p_cross1D_fit->GetBinContent(j,k)+weight);
@@ -421,7 +427,7 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
                             bin_mass = pred_mass->FindBin(mass);
                             pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
                             pred_mass_eta->SetBinContent(i,bin_mass,pred_mass_eta->GetBinContent(i,bin_mass)+weight);
-                            if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN !!" << std::endl;
+                            if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN ! 2" << std::endl;
                             
                             pred_mass_fitIh->SetBinContent(bin_mass,pred_mass_fitIh->GetBinContent(bin_mass)+weight);
                             ih_p_cross1D_fit->SetBinContent(j,k,ih_p_cross1D_fit->GetBinContent(j,k)+weight);
@@ -445,8 +451,8 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
                             bin_mass = pred_mass->FindBin(mass);
                             pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
                             pred_mass_eta->SetBinContent(i,bin_mass,pred_mass_eta->GetBinContent(i,bin_mass)+weight);
-                            if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN !!" << std::endl;
-
+                            if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN ! 3" << std::endl;
+                            
                             pred_mass_fitP->SetBinContent(bin_mass,pred_mass_fitP->GetBinContent(bin_mass)+weight);
                             ih_p_cross1D_fit->SetBinContent(j,k,ih_p_cross1D_fit->GetBinContent(j,k)+weight);
                         }
@@ -463,7 +469,7 @@ void Region::fillPredMass(const std::string& st, const std::string& st_sample,TF
                         
                         pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
                         pred_mass_eta->SetBinContent(i,bin_mass,pred_mass_eta->GetBinContent(i,bin_mass)+weight);
-                        if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN !!" << std::endl;
+                        if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN ! 4" << std::endl;
                         
                         pred_mass_noFit->SetBinContent(bin_mass,pred_mass_noFit->GetBinContent(bin_mass)+weight);
                         ih_p_cross1D_fit->SetBinContent(j,k,ih_p_cross1D_fit->GetBinContent(j,k)+weight);
@@ -783,7 +789,7 @@ void bckgEstimate(const std::string& st_sample, const std::string& dirname, cons
         TH2F c_eta_p_base(*c.eta_p);
 
         if(corrTemplateIh) corrIh(&b_ih_eta_base);
-        if(corrTemplateP) corrP(&c_eta_p_base);
+        //if(corrTemplateP) corrP(&c_eta_p_base);
 
         if(st_sample=="data2017"){bc.K_=K_data2017;bc.C_=C_data2017;}
         else if(st_sample=="data2018"){bc.K_=K_data2018;bc.C_=C_data2018;}
@@ -796,14 +802,14 @@ void bckgEstimate(const std::string& st_sample, const std::string& dirname, cons
         float rangemax_p = 30;
         if (p_base->GetBinCenter(p_base->GetMaximumBin()) < rangemax_p) rangemax_p = 0.8 * p_base->GetBinCenter(p_base->GetMaximumBin());
         
-        TF1 f_p("f_p","[0]*([1]+erf((log(x)-[2])/[3]))",0,rangemax_p);  // for the old fit
-        f_p.SetParLimits(0,0,9000);
-        f_p.FixParameter(1,1.0);
-        f_p.FixParameter(2,par_p2);
-        f_p.FixParameter(3,par_p3);
-        //TF1 f_p ("f_p", "0.5*(exp([0]*x*x+[1]*x)+exp(-[0]*x*x-[1]*x))-1", 0, rangemax_p);
-        //f_p.SetParLimits(0, 0, 1e-3);
-        //f_p.SetParLimits(1, -1e-2, 1e-2);
+        //TF1 f_p("f_p","[0]*([1]+erf((log(x)-[2])/[3]))",0,rangemax_p);  // for the old fit
+        //f_p.SetParLimits(0,0,9000);
+        //f_p.FixParameter(1,1.0);
+        //f_p.FixParameter(2,par_p2);
+        //f_p.FixParameter(3,par_p3);
+        TF1 f_p ("f_p", "0.5*(exp([0]*x*x+[1]*x)+exp(-[0]*x*x-[1]*x))-1", 0, rangemax_p);
+        f_p.SetParLimits(0, 0, 1e-3);
+        f_p.SetParLimits(1, -1e-2, 1e-2);
 
 
         // Ih fit

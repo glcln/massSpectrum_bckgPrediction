@@ -10,7 +10,7 @@ parser = OptionParser(usage="Usage: python %prog codeVersion")
 (opt,args) = parser.parse_args()
 
 datasetList=[
-    "\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/Mu2018_massCut_0_pT70_V2p18_Fpix_Eta2p4"
+    "\/opt\/sbg\/cms\/ui3_data1\/gcoulon\/CMSSW_10_6_30\/src\/HSCPTreeAnalyzer\/macros\/MET_2017_2018_massCut_0_pT70_V3p2_Fpix_Eta2p4"
 ]
 tagKC=[
     "data2018"
@@ -30,7 +30,6 @@ config=[
     #["momup", "4", "4", "1", "0", "0", "1", "1"],
     #["momdown", "4", "4", "4", "0", "0", "1", "1"],
     #["corrIh", "4", "4", "2", "1", "0", "1", "1"],
-    #["corrMom", "4", "4", "2", "0", "1", "1", "1"],
     #["FitIhUp", "4", "4", "2", "0", "0", "2", "1"],
     #["FitIhDown", "4", "4", "2", "0", "0", "0", "1"],
     #["FitMomUp", "4", "4", "2", "0", "0", "1", "2"],
@@ -71,7 +70,7 @@ lines = code.split('\n')
 config_start_index = lines.index('config=[')
 
 # Iterate through the configs
-for i in range(config_start_index + 1, config_start_index + 14):
+for i in range(config_start_index + 1, config_start_index + 13):
     # Uncomment the config line
     lines[i] = lines[i].replace('#', '')
 
