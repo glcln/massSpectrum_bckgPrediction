@@ -368,11 +368,11 @@ def BiasCorrection(h1,a_,b_):
 
 # Setup
 version = "V3p2"
-directory = "/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Fpix_"+version+"/"
+directory = "/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Fpix_"+version+"/"
 year = "2017_2018"
 region = "8fp9"
 plotType = "mass_predBC_"
-oDir = "/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Fpix_"+version+"/SystCombined/"
+oDir = "/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Fpix_"+version+"/SystCombined/"
 ofile = TFile(oDir+"sysToTBinned_"+year+"_"+region+".root","RECREATE")
 outTitle = "syst"
 labelRegion = region

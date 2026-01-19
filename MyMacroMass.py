@@ -6,7 +6,8 @@ import ROOT
 import math
 import array
 import numpy as np
-sys.path.append("/opt/sbg/cms/ui3_data1/gcoulon")
+import ctypes
+sys.path.append("/opt/sbg/cms/safe1/cms/gcoulon")
 from USE_DATE import USED_DATE, VERSION
 
 from ROOT import THStack, TCanvas, TLegend, TLatex, TPad, TH1, TH2, TLine
@@ -72,29 +73,29 @@ def overflowInLastBin(h, data, mass_max_Display):
     debugprint = False
     if (mass_max_Display > 300):
         if(mass_max_Display < h.GetBinCenter(h.GetNbinsX()) + h.GetBinWidth(h.GetNbinsX())/2):
-            if (debugprint): print 'Case where mass_max_Display < edge of histogram: ', mass_max_Display, ' ', h.GetBinCenter(h.GetNbinsX()) + h.GetBinWidth(h.GetNbinsX())/2
+            if (debugprint): print ('Case where mass_max_Display < edge of histogram: ', mass_max_Display, ' ', h.GetBinCenter(h.GetNbinsX()) + h.GetBinWidth(h.GetNbinsX())/2)
             bin_content = 0
             bin_error = 0
 
-            if (debugprint): print ''
-            if (debugprint): print '       ', h.GetName()
-            if (debugprint): print 'mass_max_Display: ', mass_max_Display, 'histo edge last bin: ', h.GetBinCenter(h.GetNbinsX()) + h.GetBinWidth(h.GetNbinsX())/2
+            if (debugprint): print ('')
+            if (debugprint): print ('       ', h.GetName())
+            if (debugprint): print ('mass_max_Display: ', mass_max_Display, 'histo edge last bin: ', h.GetBinCenter(h.GetNbinsX()) + h.GetBinWidth(h.GetNbinsX())/2)
             for i in range (h.FindBin(mass_max_Display)-1, h.GetNbinsX()+1):
                 bin_content += h.GetBinContent(i)
                 bin_error += h.GetBinError(i)**2
 
-                if (debugprint): print 'Bin #{}, mass {}: Points = {} +/- {}'.format(i,h.GetBinCenter(i),h.GetBinContent(i),h.GetBinError(i))
+                if (debugprint): print ('Bin #{}, mass {}: Points = {} +/- {}'.format(i,h.GetBinCenter(i),h.GetBinContent(i),h.GetBinError(i)))
 
                 h.SetBinContent(i,0)
                 h.SetBinError(i,0)
-                if (debugprint): print 'Bin #{}, mass {}: Points = {} +/- {}'.format(i,h.GetBinCenter(i),h.GetBinContent(i),h.GetBinError(i))
+                if (debugprint): print ('Bin #{}, mass {}: Points = {} +/- {}'.format(i,h.GetBinCenter(i),h.GetBinContent(i),h.GetBinError(i)))
 
             h.SetBinContent(h.FindBin(mass_max_Display)-1, bin_content + h.GetBinContent(h.GetNbinsX()+1))
             if (data): h.SetBinError(h.FindBin(mass_max_Display)-1,math.sqrt(bin_error))
             else: h.SetBinError(h.FindBin(mass_max_Display)-1,math.sqrt(bin_error + h.GetBinError(h.GetNbinsX()+1)**2))
 
         elif (mass_max_Display == h.GetBinCenter(h.GetNbinsX()) + h.GetBinWidth(h.GetNbinsX())/2):
-            if (debugprint): print 'Case where mass_max_Display == edge of histogram: ', mass_max_Display, ' ', h.GetBinCenter(h.GetNbinsX()) + h.GetBinWidth(h.GetNbinsX())/2
+            if (debugprint): print ('Case where mass_max_Display == edge of histogram: ', mass_max_Display, ' ', h.GetBinCenter(h.GetNbinsX()) + h.GetBinWidth(h.GetNbinsX())/2)
             h.SetBinContent(h.GetNbinsX(),h.GetBinContent(h.GetNbinsX())+h.GetBinContent(h.GetNbinsX()+1))
             
             if(data): h.SetBinError(h.GetNbinsX(),math.sqrt(h.GetBinContent(h.GetNbinsX())))
@@ -103,9 +104,9 @@ def overflowInLastBin(h, data, mass_max_Display):
             h.SetBinContent(h.GetNbinsX()+1,0)
             h.SetBinError(h.GetNbinsX()+1,0)
         
-        else: print "Error: mass_max_Display > histo edge last bin"
+        else: print ("Error: mass_max_Display > histo edge last bin")
     else:
-        if (debugprint): print 'Case where mass_max_Display = ', mass_max_Display, ' useless to overflowInLastBin in this case'
+        if (debugprint): print ('Case where mass_max_Display = ', mass_max_Display, ' useless to overflowInLastBin in this case')
 
 def underflowInFirstBin(h,data=False):
     h.SetBinContent(1,h.GetBinContent(0)+h.GetBinContent(1))
@@ -143,14 +144,18 @@ def ratioIntegral(h1,h2,systErr,upTo=-1):
     else:
         bornUp=h1.FindBin(upTo)
     for i in range(0,bornUp):
-        e1=ROOT.Double(0.0)
-        e2=ROOT.Double(0.0)
-        if(upTo==-1):
-            a=h1.IntegralAndError(i,h1.GetNbinsX()+1,e1,"")
-            b=h2.IntegralAndError(i,h1.GetNbinsX()+1,e2,"")
+        e1 = ctypes.c_double(0.0)
+        e2 = ctypes.c_double(0.0)
+
+        if upTo == -1:
+            a = h1.IntegralAndError(i, h1.GetNbinsX()+1, e1, "")
+            b = h2.IntegralAndError(i, h1.GetNbinsX()+1, e2, "")
         else:
-            a=h1.IntegralAndError(i,bornUp-1,e1,"")
-            b=h2.IntegralAndError(i,bornUp-1,e2,"")
+            a = h1.IntegralAndError(i, bornUp-1, e1, "")
+            b = h2.IntegralAndError(i, bornUp-1, e2, "")
+
+        e1 = e1.value
+        e2 = e2.value
         if b != 0 and a != 0:
             c=math.sqrt((e1*e1)/(a*a)+(e2*e2)/(b*b))*a/b
             h3.SetBinContent(i,a/b)
@@ -170,11 +175,9 @@ def pullOfHisto(h2,h1,systErr):
         Perr=h1.GetBinError(i)
         Derr=h2.GetBinErrorLow(i)
         
-        if(P+(Perr*Perr) > 0): res.SetBinContent(i,(D-P)/math.sqrt(P+(Perr*Perr)))
+        if (Derr*Derr+Perr*Perr > 0): res.SetBinContent(i,(D-P)/math.sqrt(Derr*Derr+Perr*Perr))
         else: res.SetBinContent(i,0)
-        #res.SetBinContent(i,(D-P)/math.sqrt(P+(Perr*Perr)))
-        #if (Derr*Derr+Perr*Perr > 0): res.SetBinContent(i,(D-P)/math.sqrt(Derr*Derr+Perr*Perr))
-        #else: res.SetBinContent(i,0)
+
     return res
 
 def addSyst(h,syst):
@@ -269,11 +272,11 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv,"hi:o:r:d",["ifile=","ofile=","region=","odir="])
     except getopt.GetoptError:
-        print 'test.py -i <inputfile> -o <outputfile> -r <region> -d <odir>'
+        print ('test.py -i <inputfile> -o <outputfile> -r <region> -d <odir>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print 'test.py -i <inputfile> -o <outputfile> -r <region> -d <odir>'
+            print ('test.py -i <inputfile> -o <outputfile> -r <region> -d <odir>')
             sys.exit()
         elif opt in ("-i", "--ifile"):
             inputfile = arg
@@ -287,10 +290,10 @@ def main(argv):
     os.system('mkdir -p '+odir)
     outputfile = odir+'/'+outputfile
 
-    print ' Input file: ', inputfile
-    print 'Output file: ', outputfile
-    print '     Region: ', region
-    print '' 
+    print (' Input file: ', inputfile)
+    print ('Output file: ', outputfile)
+    print ('     Region: ', region)
+    print ('' )
 
     signal = True
     blind = False
@@ -383,7 +386,7 @@ def main(argv):
     signal = False
 
     ifile = ROOT.TFile(inputfile)
-    ext = "OnlyMET"
+    ext = "METanalysis"
     
     obs = ifile.Get("mass_obs_"+region)
     pred = ifile.Get("mass_predBC_"+region)
@@ -397,9 +400,9 @@ def main(argv):
     idirSignalGlu = "/opt/sbg/cms/ui3_data1/gcoulon/HSCP_prod/UnblindedProd/V1p1/HSCPgluino_V1p1/"
     idirSignalStau = "/opt/sbg/cms/ui3_data1/gcoulon/HSCP_prod/UnblindedProd/V1p1/HSCPpairStau_V1p1/"
 
-    ifileGl2400 = ROOT.TFile("/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Gluino2400_massCut_0_pT70_V2p20_Gstrip_Fpix_Eta2p4_Scale.root")
+    ifileGl2400 = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/output/Gluino2400_massCut_0_pT70_V5p1_Fpix_Eta2p4_Scale.root")
     ifileGl1600 = ROOT.TFile(idirSignalGlu+"HSCPgluino_M-1600_merged.root")
-    ifileGl2000 = ROOT.TFile("/opt/sbg/cms/ui3_data1/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/macros/Gluino2000_massCut_0_pT70_V2p23_Gstrip_Fpix_Eta2p4_Scale.root")
+    ifileGl2000 = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/output/Gluino2000_massCut_0_pT70_V5p0_Fpix_Eta2p4_Scale.root")
     ifilePPStau557 = ROOT.TFile(idirSignalStau+"HSCPpairStau_M-557_merged.root")
     ifilePPStau871 = ROOT.TFile(idirSignalStau+"HSCPpairStau_M-871_merged.root")
 
@@ -407,9 +410,9 @@ def main(argv):
 
     PlotSignal = False
 
-    m_Gl2400 = ifileGl2400.Get("mass_regionD_"+region+"_" + ext)
+    m_Gl2400 = ifileGl2400.Get("mass_regionD_"+region+"_METContainingMu")
     m_Gl1600 = ifileGl1600.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
-    m_Gl2000 = ifileGl2000.Get("mass_regionD_"+region+"_SingleMu")
+    m_Gl2000 = ifileGl2000.Get("mass_regionD_"+region+"_METContainingMu")
     m_ppStau557 = ifilePPStau557.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
     m_ppStau871 = ifilePPStau871.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
 
@@ -433,9 +436,9 @@ def main(argv):
     normSignal=1
     if(year=="2017_2018"):
         normSignal=1
-        #CMS_lumi.lumi_13TeV = "2017+2018 - 101 fb^{-1}"
-        CMS_lumi.lumi_13TeV = "78.37 fb^{-1}"
-        #CMS_lumi.lumi_13TeV = ""
+        #CMS_lumi.lumi_13TeV = "84.5 fb^{-1}"   # muon dataset
+        #CMS_lumi.lumi_13TeV = "78.37 fb^{-1}" # MET dataset
+        CMS_lumi.lumi_13TeV = "101 fb^{-1}"
 
     if(year=="2018"):
         normSignal=59.7/101
@@ -479,11 +482,13 @@ def main(argv):
     ifileSyst = ROOT.TFile("systBckg/sysTotBinned_"+yearSyst+"_"+regionSyst+".root")
     if(region=="8fp9" and ("MET" in inputfile)): ifileSyst = ROOT.TFile("systBckg/sysTotBinned_2017_2018_8fp9_MET.root")
     if(region=="8fp9" and ("OnlyMET" in inputfile)): ifileSyst = ROOT.TFile("systBckg/sysTotBinned_2017_2018_8fp9_OnlyMET.root")
+    print("syst. file: ", ifileSyst.GetName())
     histoOfSyst = ifileSyst.Get("systTotalBinned")
 
     pred_noCorrBias = pred.Clone()
     pred_noBlind = pred.Clone("_prednoBlind")
     obs_noBlind = obs.Clone("_obsnoBlind")
+
 
     biasCorr = False
     if(a_==0):
@@ -492,10 +497,10 @@ def main(argv):
         blindMassUp(pred,300)
     else:
         if(biasCorr==True):
-            print "Correction bias: ON"
+            print ("Correction bias: ON")
             BiasCorrection(pred)
             BiasCorrection(pred_noBlind)
-        else: print "Correction bias: OFF"
+        else: print ("Correction bias: OFF")
     
     if(a_<0): BiasCorrection(pred_noCorrBias)
 
@@ -503,10 +508,13 @@ def main(argv):
     (pred,predD,predU)=addHSyst(pred,histoOfSyst,pred_noCorrBias)
     (pred_noBlind,pred_noBlindU,pred_noBlindD)=addHSyst(pred_noBlind,histoOfSyst,pred_noCorrBias)
 
-    err_obs_m300=ROOT.Double(0)
-    err_pred_m300=ROOT.Double(0)
-    obs_m300 = obs_noBlind.IntegralAndError(obs_noBlind.FindBin(300),obs_noBlind.GetNbinsX()+1,err_obs_m300)
-    pred_m300 = pred_noBlind.IntegralAndError(pred_noBlind.FindBin(300),pred_noBlind.GetNbinsX()+1,err_pred_m300)
+    err_obs_m300 = ctypes.c_double(0)
+    obs_m300 = obs_noBlind.IntegralAndError(obs_noBlind.FindBin(300), obs_noBlind.GetNbinsX()+1, err_obs_m300)
+    err_obs_m300 = err_obs_m300.value
+
+    err_pred_m300 = ctypes.c_double(0)
+    pred_m300 = pred_noBlind.IntegralAndError(pred_noBlind.FindBin(300), pred_noBlind.GetNbinsX()+1, err_pred_m300)
+    err_pred_m300 = err_pred_m300.value
 
     predD.SetName("predD")
     predU.SetName("predU")
@@ -857,8 +865,7 @@ def main(argv):
     frameR2.SetStats(0)
     frameR2.GetXaxis().SetTitle("")
     frameR2.GetYaxis().SetTitle("obs / pred")
-    frameR2.SetMaximum(2.)
-    frameR2.SetMinimum(0.0)
+    frameR2.GetYaxis().SetRangeUser(0.,2.)
     frameR2.GetYaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
     frameR2.GetYaxis().SetLabelSize(12) #font size
     frameR2.GetYaxis().SetTitleFont(43) #give the font size in pixel (instead of fraction)
@@ -872,6 +879,7 @@ def main(argv):
     frameR2.GetXaxis().SetTitleOffset(3.75)
     frameR2.Draw("AXIS")
 
+    ratioSimpleH.Sumw2()
     ratioSimpleH.SetMarkerStyle(21)
     ratioSimpleH.SetMarkerColor(1)
     ratioSimpleH.SetMarkerSize(0.7)
@@ -1010,12 +1018,12 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    print '----- First: bias correction'    
+    print ('----- First: bias correction')
     (chi2,ndof,a,b,aerr,berr,region_,reg,obs_m300,pred_m300,err_obs_m300,err_pred_m300) = main(sys.argv[1:])
 
-    print ''
-    print '----- Second: full run'
-    print 'a = ', a, ' and b = ', b
+    print ('')
+    print ('----- Second: full run')
+    print ('a = ', a, ' and b = ', b)
     a_ = a
     b_ = b
     odir = sys.argv[8]
