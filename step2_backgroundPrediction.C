@@ -13,6 +13,7 @@
 #include "CommonFunctions.h"
 
 using namespace std;
+gErrorIgnoreLevel = kFatal;
 
 
 
@@ -49,19 +50,41 @@ void step2_backgroundPrediction(){
     if(fitIh==2) outfilename_ += "_fitIhUp";
     if(fitP==0) outfilename_ += "_fitPDown";
     if(fitP==2) outfilename_ += "_fitPUp";
-    if(!useFit) outfilename_ += "_NoFit";
     outfilename_ += "_EtaReweighting";
 
-    std::cout << outfilename_ << std::endl;
 
-    bool bool_rebin=rebin;
+    //std::string Ext = "_METanalysis_Eta1";
+    //std::string Ext = "_METanalysis_Eta1_2p4";
+    std::string Ext = "_METanalysis_Eta2p4";
+
+    std::string etaName = "";
+    if (Ext == "_METanalysis_Eta1") etaName = "_Eta1";
+    else if (Ext == "_METanalysis_Eta1_2p4") etaName += "_Eta1_2p4";
+    else if (Ext == "_METanalysis_Eta2p4") etaName += "_Eta2p4";
+    outfilename_ += etaName;
+
+
+    bool bool_rebin = rebin;
+    bool blind = false;
+    bool useOldIhFit = false, useOld1oPFit = false;
+    bool saveFits = true;
+    std::string DataSetName = filename.substr(filename.find_last_of('/') + 1);
     
+    //useFit = false; // to be commented !
+    cout << "Use fit: " << useFit << endl;
+    cout << "useOldIhFit: " << useOldIhFit << ", useOld1oPFit: " << useOld1oPFit << endl;
+    cout << "saveFits: " << saveFits << endl;
+
+    if (useOldIhFit || useOld1oPFit) outfilename_ += "_OldFit";
+    else if (!useOldIhFit && !useOld1oPFit) outfilename_ += "_NewFit";
+    else if (!useFit) outfilename_ += "_NoFit";
+
+
+    std::cout << "Input file:      " << DataSetName << std::endl;
+    std::cout << "Output file:     " << outfilename_ << std::endl;
     TFile* ifile = new TFile((filename+".root").c_str());
     TFile* ofile = new TFile((outfilename_+".root").c_str(),"RECREATE");
 
-    std::string Ext = "_METanalysis";
-    //std::string Ext = "_ReRunRaph";
-    //std::string Ext = "_NoCriteria";
     
     // ------------------------------------------------------------------
     //                              If Gstrip
@@ -110,7 +133,7 @@ void step2_backgroundPrediction(){
     std::cout << std::endl;
     std::cout << "    Loading..." << std::endl;
 
-    loadHistograms(ra_ias50, ifile, "regionA_ias50"+Ext ,bool_rebin ,rebineta ,rebinp ,rebinih ,rebinmass); 
+    loadHistograms(ra_ias50, ifile, "regionA_ias50" + Ext ,bool_rebin ,rebineta ,rebinp ,rebinih ,rebinmass); 
     
     loadHistograms(rb_50ias60, ifile, "regionB_50ias60"+E xt,bool_reb in,rebine ta,rebi np,rebin ih,rebinmass);
     loadHistograms(rb_50ias90, ifile, "regionB_50ias90"+E xt,bool_reb in,rebine ta,rebi np,rebin ih,rebinmass); 
@@ -118,7 +141,7 @@ void step2_backgroundPrediction(){
     loadHistograms(rb_70ias80, ifile, "regionB_70ias80"+E xt,bool_reb in,rebine ta,rebi np,rebin ih,rebinmass); 
     loadHistograms(rb_80ias90, ifile, "regionB_80ias90"+E xt,bool_reb in,rebine ta,rebi np,rebin ih,rebinmass);
 
-    loadHistograms(rc_ias50, ifile, "regionC_ias50"+Ext ,bool_rebin ,rebineta ,rebinp ,rebinih ,rebinmass); 
+    loadHistograms(rc_ias50, ifile, "regionC_ias50" + Ext ,bool_rebin ,rebineta ,rebinp ,rebinih ,rebinmass); 
 
     loadHistograms(rd_50ias60, ifile, "regionD_50ias60"+E xt,bool_reb in,rebine ta,rebi np,rebin ih,rebinmass);
     loadHistograms(rd_50ias90, ifile, "regionD_50ias90"+E xt,bool_reb in,rebine ta,rebi np,rebin ih,rebinmass); 
@@ -133,9 +156,9 @@ void step2_backgroundPrediction(){
     loadHistograms(rbc_80ias90, ifile, "regionD_80ias90"+E xt,bool_reb in,rebine ta,rebi np,rebin ih,rebinmass);
 
 
-    loadHistograms(rb_999ias100, ifile, "regionB_999ias100" +Ext,bool_r ebin,rebi neta,re binp,reb inih,rebinmass); 
-    loadHistograms(rd_999ias100, ifile, "regionD_999ias100" +Ext,bool_r ebin,rebi neta,re binp,reb inih,rebinmass); 
-    loadHistograms(rbc_999ias100, ifile, "regionD_999ias100" +Ext,bool_r ebin,rebi neta,re binp,reb inih,rebinmass);
+    loadHistograms(rb_999ias100, ifile, "regionB_999ias100"  + Ext,bool_r ebin,rebi neta,re binp,reb inih,rebinmass); 
+    loadHistograms(rd_999ias100, ifile, "regionD_999ias100"  + Ext,bool_r ebin,rebi neta,re binp,reb inih,rebinmass); 
+    loadHistograms(rbc_999ias100, ifile, "regionD_999ias100"  + Ext,bool_r ebin,rebi neta,re binp,reb inih,rebinmass);
     
     std::cout << "    Regions loaded" << std::endl;
     std::cout << std::endl;
@@ -183,17 +206,17 @@ void step2_backgroundPrediction(){
     std::cout << std::endl;
     std::cout << "    Loading..." << std::endl;
 
-    loadHistograms(ra_3fp8, ifile, "regionA_3fp8"+Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
-    loadHistograms(ra_3fp9, ifile, "regionA_3fp9"+Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
-    loadHistograms(rb_8fp9, ifile, "regionB_8fp9"+Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
-    loadHistograms(rb_9fp10, ifile, "regionB_9fp10"+Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
-    loadHistograms(rc_3fp8, ifile, "regionC_3fp8"+Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
-    loadHistograms(rc_3fp9, ifile, "regionC_3fp9"+Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
-    loadHistograms(rd_8fp9, ifile, "regionD_8fp9"+Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
-    loadHistograms(rd_9fp10, ifile, "regionD_9fp10"+Ext ,bool_rebin ,rebineta ,rebinp ,rebinih ,rebinmass);
-    loadHistograms(rbc_8fp9, ifile, "regionD_8fp9"+Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
-    loadHistograms(rbc_9fp10, ifile, "regionD_9fp10"+Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
-    loadHistograms(rbc_3fp8, ifile, "regionC_3fp8"+Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
+    loadHistograms(ra_3fp8, ifile, "regionA_3fp8" + Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
+    loadHistograms(ra_3fp9, ifile, "regionA_3fp9" + Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
+    loadHistograms(rb_8fp9, ifile, "regionB_8fp9" + Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
+    loadHistograms(rb_9fp10, ifile, "regionB_9fp10" + Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
+    loadHistograms(rc_3fp8, ifile, "regionC_3fp8" + Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
+    loadHistograms(rc_3fp9, ifile, "regionC_3fp9" + Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
+    loadHistograms(rd_8fp9, ifile, "regionD_8fp9" + Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
+    loadHistograms(rd_9fp10, ifile, "regionD_9fp10" + Ext ,bool_rebin ,rebineta ,rebinp ,rebinih ,rebinmass);
+    loadHistograms(rbc_8fp9, ifile, "regionD_8fp9" + Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
+    loadHistograms(rbc_9fp10, ifile, "regionD_9fp10" + Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
+    loadHistograms(rbc_3fp8, ifile, "regionC_3fp8" + Ext, bool_rebin, rebineta, rebinp, rebinih, rebinmass);
 
     std::cout << "    Regions loaded" << std::endl;
     std::cout << std::endl;
@@ -201,14 +224,7 @@ void step2_backgroundPrediction(){
     std::cout << std::endl;
 
     // Estimate the background in different Fpixel slices
-    bool blind = false;
     bool ifIhpSAME = true; // TRUE: Ih and p templates in C region but B still used for the normalisation
-    bool useOldIhFit = false, useOld1oPFit = false;
-    bool saveFits = true;
-
-    cout << "Use fit: " << useFit << endl;
-    cout << "useOldIhFit: " << useOldIhFit << ", useOld1oPFit: " << useOld1oPFit << endl;
-    cout << "saveFits: " << saveFits << endl;
     
 
         // In 9fp10 with A and C in 3fp8
@@ -218,8 +234,8 @@ void step2_backgroundPrediction(){
 
 
         // In 8fp9
-    bckgEstimate(st_sample, dirname, rc_3fp8, rc_3fp8, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
-                 "8fp9", nPE, useFit, useOldIhFit, useOldIhFit, saveFits, corrTemplateIh, corrTemplateP, fitIh, fitP, blind);
+    bckgEstimate(DataSetName, st_sample, dirname, rc_3fp8, rc_3fp8, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
+                 "8fp9", nPE, useFit, useOldIhFit, useOldIhFit, etaName, saveFits, corrTemplateIh, corrTemplateP, fitIh, fitP, blind);
     
         // Only in C: no Ih reweighting in Region.h to change
     //bckgEstimate(st_sample, dirname, rc_3fp8, rc_3fp8, rbc_3fp8, rc_3fp8, rc_3fp8, ifIhpSAME, rc_3fp8, "3fp8", nPE, corrTemplateIh, corrTemplateP, fitIh, fitP, blind);

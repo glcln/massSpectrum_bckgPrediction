@@ -8,7 +8,7 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
 using namespace std::placeholders;
-
+gErrorIgnoreLevel = kFatal;
 
 // SETUP
 
@@ -81,7 +81,8 @@ class Region{
         ~Region();
         void initHisto(TFileDirectory &dir, int etabins, int ihbins, int pbins, int massbins);
         void fill(float& eta, float& p, float& pt, float& pterr, float& ih, float& ias, float& m, float& w);
-        void fillPredMass(const std::string& st,
+        void fillPredMass(const std::string& filename,
+                          const std::string& st,
                           const std::string& st_sample,
                           TF1& f_p,
                           TF1& f_ih,
@@ -91,6 +92,7 @@ class Region{
                           float weight_ = -1,
                           bool useOldIhFit = false,
                           bool useOld1oPFit = false,
+                          const std::string& etaName = "",
                           bool saveFits = false);
         void write();
 
@@ -207,7 +209,8 @@ void Region::fill(float& eta, float& p, float& pt, float& pterr, float& ih, floa
 }
 
 
-void Region::fillPredMass(const std::string& st,
+void Region::fillPredMass(const std::string& filename,
+                          const std::string& st,
                           const std::string& st_sample,
                           TF1& f_p,
                           TF1& f_ih,
@@ -217,13 +220,14 @@ void Region::fillPredMass(const std::string& st,
                           float weight_ = -1,
                           bool useOldIhFit = false,
                           bool useOld1oPFit = false,
+                          const std::string& etaName = "",
                           bool saveFits = false) {
 
     // Debug Fit
     TFile* OutputHisto = nullptr;
-    std::string filename = "DebugFit/Fits_" + st + ((useOldIhFit || useOld1oPFit) ? "_OldFit.root" : "_NewFit.root");
+    std::string filenameOutputFit = "DebugFit/Fits_" + filename + "_" + st + ((useOldIhFit || useOld1oPFit) ? "_OldFit" : "_NewFit") + etaName + ".root";
     if (saveFits) {
-        OutputHisto = new TFile(filename.c_str(), "RECREATE");
+        OutputHisto = new TFile(filenameOutputFit.c_str(), "RECREATE");
         OutputHisto->cd();
     }
 
@@ -316,7 +320,7 @@ void Region::fillPredMass(const std::string& st,
         {
             incrFit++;
 
-            end1oPFit = 0.3 * p->GetBinCenter(p->GetMaximumBin());
+            end1oPFit = 0.4 * p->GetBinCenter(p->GetMaximumBin());
             if (end1oPFit > 25) end1oPFit = 25;
             if (useOld1oPFit) end1oPFit = 30; // for the old fit
 

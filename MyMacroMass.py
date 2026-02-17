@@ -8,10 +8,9 @@ import array
 import numpy as np
 import ctypes
 sys.path.append("/opt/sbg/cms/safe1/cms/gcoulon")
-from USE_DATE import USED_DATE, VERSION
 
 from ROOT import THStack, TCanvas, TLegend, TLatex, TPad, TH1, TH2, TLine
-import CMS_lumi, tdrstyle
+import tdrstyle
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptFit(1111)
@@ -26,24 +25,9 @@ year='2017_2018'
 #year='ttbarwjets'
 #year='wjets'
 #year='ttbar'
+year = '2024'
+era = ''
 region_=""
-
-CMS_lumi.lumi_sqrtS = "13 TeV"
-#CMS_lumi.cmsText="CMS"
-CMS_lumi.cmsText="Private work"
-CMS_lumi.cmsTextFont = 52
-CMS_lumi.cmsTextSize   = 0.6
-CMS_lumi.cmsTextOffset = -0.05
-CMS_lumi.lumi_13TeV = "F_{pixel}"
-#CMS_lumi.lumi_13TeV = "2018 - 59.7 fb^{-1}"
-#CMS_lumi.lumi_13TeV = "2017 - 41.5 fb^{-1}"
-CMS_lumi.lumiTextOffset = 0.1
-CMS_lumi.lumiTextSize     = 0.55
-CMS_lumi.writeExtraText = False
-CMS_lumi.extraText = "Internal"
-iPos = 0
-if( iPos==0 ): CMS_lumi.relPosX = 0.12
-iPeriod = 4
 
 
 #----------------------------------------------------
@@ -258,6 +242,22 @@ def blindMass(h,m):
         if(mass<m): 
             h.SetBinContent(i,0)
 
+def poissonHisto(h,RNG):
+    for i in range (0,h.GetNbinsX()):
+        h.SetBinContent(i,RNG.Poisson(h.GetBinContent(i)))
+
+def PE_Pred(obs,h,nPE):
+    h_chi2=ROOT.TH1F("chi2",";#chi^{2};",100,0,200)
+    h_KS=ROOT.TH1F("KS",";Kolmogorov-Smirnov test;",100,0,1e-1)
+    RNG=ROOT.TRandom3()
+    for i in range(nPE):
+        poissonHisto(h,RNG)
+        chi2=h.Chi2Test(obs,"CHI2/NDF")
+        KS=h.KolmogorovTest(obs,"M")
+        h_chi2.Fill(chi2)
+        h_KS.Fill(KS)
+    return h_chi2, h_KS
+
 
 #----------------------------------------------------
 #                       Main
@@ -265,21 +265,24 @@ def blindMass(h,m):
 
 def main(argv):
     # -------------- Setup --------------
-    outputfile=''
-    region=''
-    odir=''
+    outputfile = ''
+    region = ''
+    odir = ''
+    labelName = ''
 
     try:
-        opts, args = getopt.getopt(argv,"hi:o:r:d",["ifile=","ofile=","region=","odir="])
+        opts, args = getopt.getopt(argv,"hi:o:r:d",["ifile=","labelName=","ofile=","region=","odir="])
     except getopt.GetoptError:
-        print ('test.py -i <inputfile> -o <outputfile> -r <region> -d <odir>')
+        print ('test.py -i <inputfile> -e <labelName> -o <outputfile> -r <region> -d <odir>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print ('test.py -i <inputfile> -o <outputfile> -r <region> -d <odir>')
+            print ('test.py -i <inputfile> -e <labelName> -o <outputfile> -r <region> -d <odir>')
             sys.exit()
         elif opt in ("-i", "--ifile"):
             inputfile = arg
+        elif opt in ("-e", "--labelName"):
+            labelName = arg
         elif opt in ("-o", "--ofile"):
             outputfile = arg
         elif opt in ("-r", "--region"):
@@ -386,12 +389,11 @@ def main(argv):
     signal = False
 
     ifile = ROOT.TFile(inputfile)
-    ext = "METanalysis"
     
     obs = ifile.Get("mass_obs_"+region)
     pred = ifile.Get("mass_predBC_"+region)
-    if (region=="80ias90"): C_mass = ifile.Get("mass_regionC_ias50_" + ext)
-    elif (region=="8fp9"): C_mass = ifile.Get("mass_regionC_3fp8_" + ext)
+    if (region=="80ias90"): C_mass = ifile.Get("mass_regionC_ias50_" + labelName)
+    elif (region=="8fp9"): C_mass = ifile.Get("mass_regionC_3fp8_" + labelName)
     else: C_mass = ifile.Get("mass_obs_"+region)
     pred_noSyst = addSyst(pred,0.0)
 
@@ -433,25 +435,14 @@ def main(argv):
         obs=obs.Rebin(sizeRebinning,"obs_new",rebinning)
         C_mass = C_mass.Rebin(sizeRebinning,"C_mass_new",rebinning)
 
-    normSignal=1
-    if(year=="2017_2018"):
-        normSignal=1
-        #CMS_lumi.lumi_13TeV = "84.5 fb^{-1}"   # muon dataset
-        #CMS_lumi.lumi_13TeV = "78.37 fb^{-1}" # MET dataset
-        CMS_lumi.lumi_13TeV = "101 fb^{-1}"
-
-    if(year=="2018"):
-        normSignal=59.7/101
-        CMS_lumi.lumi_13TeV = "" #2018 - 59.7 fb^{-1}"
-    elif(year=="2017"):
-        normSignal=41.5/101
-        CMS_lumi.lumi_13TeV = "2017 - 41.5 fb^{-1}"
-    elif(year=="wjets"): CMS_lumi.lumi_13TeV = "W+jets - 101 fb^{-1}"
-    elif(year=="ttbar"): CMS_lumi.lumi_13TeV = "t#bar{t}+jets - 101 fb^{-1}"
-    elif(year=="ttbarwjets"): CMS_lumi.lumi_13TeV = "t#bar{t}/W+jets - 101 fb^{-1}"
-    elif(year=="zjets"): CMS_lumi.lumi_13TeV = "Z+jets - 101 fb^{-1}"
-
-
+    normSignal = 1
+    if(year=="2017_2018"): normSignal = 1
+    if(year=="2024"):
+        if (era=="F"): normSignal=25.40/100
+        elif (era=="G"): normSignal=34.4/100
+    if(year=="2018"): normSignal=59.7/101
+    elif(year=="2017"): normSignal=41.5/101
+    
     if (PlotSignal):
         m_Gl2400.Scale(normSignal)
         m_Gl2000.Scale(normSignal)
@@ -479,7 +470,8 @@ def main(argv):
     if(year=="2017_2018"): yearSyst="2018"
 
 
-    ifileSyst = ROOT.TFile("systBckg/sysTotBinned_"+yearSyst+"_"+regionSyst+".root")
+    ifileSyst = ROOT.TFile("systBckg/sysTotBinned_2017_2018_8fp9_MET.root")
+    if (year != "2024"): ifileSyst = ROOT.TFile("systBckg/sysTotBinned_"+yearSyst+"_"+regionSyst+".root")
     if(region=="8fp9" and ("MET" in inputfile)): ifileSyst = ROOT.TFile("systBckg/sysTotBinned_2017_2018_8fp9_MET.root")
     if(region=="8fp9" and ("OnlyMET" in inputfile)): ifileSyst = ROOT.TFile("systBckg/sysTotBinned_2017_2018_8fp9_OnlyMET.root")
     print("syst. file: ", ifileSyst.GetName())
@@ -570,8 +562,32 @@ def main(argv):
     # Poisson errors for the observed distribution
     obs = poissonning(obs)
     
-    KSTEST = obs.KolmogorovTest(pred)
-    #print 'Kolmogorov test: ', KSTEST
+
+
+
+    # Stat. tests
+    # h_ch2 = ROOT.TH1F("chi2",";#chi^{2};",100,0,200)
+    # h_kolmo = ROOT.TH1F("KS",";Kolmogorov-Smirnov test;",100,0,1e-1)
+    # h_ch2, h_kolmo = PE_Pred(obs, pred, 10000)
+
+    # KSTEST = obs.KolmogorovTest(pred)
+    # print('Kolmogorov test: ', KSTEST)
+
+    # pull = pullOfHisto(obs,pred,0.)
+    # empty = pull.Clone("empty")
+    # for i in range(pull.GetNbinsX()):
+    #     empty.SetBinContent(i,0)
+    #     empty.SetBinError(i,0)
+
+    # Chi2ObsPred = obs.Chi2Test(pred,"UWP")
+    # print("Chi2 between prediction and observation  = {}".format(Chi2ObsPred))
+
+    # Chi2OfPull =  pull.Chi2Test(empty, "UU")
+    # print("Chi2 of the pull plot = {}".format(Chi2OfPull))
+    #
+    
+
+
     
     ratioSimpleH = ratioHisto(obs,pred)
     ratio_massC_obs = ratioHisto(C_mass,pred)
@@ -590,7 +606,7 @@ def main(argv):
         if (PlotSignal):
             m_Gl2400 = binWidth(m_Gl2400)
             m_Gl2000 = binWidth(m_Gl2000)
-        m_Gl1600 = binWidth(m_Gl1600)
+        m_Gl1600 = xbinWidth(m_Gl1600)
         m_ppStau557 = binWidth(m_ppStau557)
         m_ppStau871 = binWidth(m_ppStau871)
 
@@ -609,40 +625,40 @@ def main(argv):
     t1.SetBottomMargin(0.005)
     c1.cd()
 
-    t2=TPad("t2","t2", 0.0, 0.3, 0.95, 0.45)
+    t2=TPad("t2","t2", 0.0, 0.32, 0.95, 0.45)
     t2.Draw()
     t2.cd()
     t2.SetGridy(1)
-    t2.SetPad(0,0.3,0.95,0.45)
+    t2.SetPad(0,0.32,0.95,0.45)
     t2.SetTopMargin(0.1)
     t2.SetBottomMargin(0.02)
     c1.cd()
     
-    t3=TPad("t3","t3", 0.0, 0.15, 0.95, 0.3)
+    t3=TPad("t3","t3", 0.0, 0.18, 0.95, 0.32)
     t3.Draw()
     t3.cd()
     t3.SetGridy(1)
-    t3.SetPad(0,0.15,0.95,0.3)
+    t3.SetPad(0,0.18,0.95,0.32)
     t3.SetTopMargin(0.1)
     t3.SetBottomMargin(0.02)
     c1.cd()
 
-    t4=TPad("t4","t4", 0.0, 0.0, 0.95, 0.15)
+    t4=TPad("t4","t4", 0.0, 0.0, 0.95, 0.18)
     t4.Draw()
     t4.cd()
     t4.SetGridy(1)
-    t4.SetPad(0,0.0,0.95,0.15)
+    t4.SetPad(0,0.0,0.95,0.18)
     t4.SetTopMargin(0.1)
     t4.SetBottomMargin(0.3)
     t1.cd()
 
-    min_entries=pred.GetBinContent(pred.FindBin(max_mass)-1)/5
+    min_entries=pred.GetBinContent(pred.FindBin(max_mass)-1)/10
     if(doRebin==False):
         min_entries=1e-6
     max_entries=pred.GetMaximum()*100
 
-    min_entries = 1e-4
-    max_entries = 5e6
+    #min_entries = 1e-4
+    #max_entries = 5e6
 
     titleYaxis = "Events / bin"
     if (isBinWidth):
@@ -728,14 +744,39 @@ def main(argv):
         m_ppStau557.Draw("same E1")
         m_ppStau871.Draw("same E1")
 
-    leg=TLegend(0.5,0.6,0.8,0.95)
+    leg=TLegend(0.5,0.75,0.8,0.95)
     leg.SetFillStyle(0)
     leg.SetBorderSize(0)
     leg.SetTextFont(43)
     leg.SetTextSize(14)
-    leg.SetHeader(labelRegion); 
+    if (labelRegion == "8fp9"): leg.SetHeader("CR : " + labelRegion)
+    else: leg.SetHeader("Region : " + labelRegion)
 
-    pred_leg=pred.Clone()
+    tex1 = ROOT.TLatex(0.85, 0.96, "(13.6 TeV)")
+    if (year == "2024"):
+        tex1 = ROOT.TLatex(0.63, 0.96, "2024 - 105.8 fb^{-1} (13.6 TeV)")
+        if (era == "F"): tex1 = ROOT.TLatex(0.63, 0.96, "2024F - 25.40 fb^{-1} (13.6 TeV)")
+        if (era == "G"): tex1 = ROOT.TLatex(0.63, 0.96, "2024G - 34.4 fb^{-1} (13.6 TeV)")
+    elif(year == "wjets"): tex1 = ROOT.TLatex(0.63, 0.96, "W+jets (13.6 TeV)")
+    elif(year == "ttbar"): tex1 = ROOT.TLatex(0.63, 0.96, "t#bar{t} (13.6 TeV)")
+    elif(year == "qcd"): tex1 = ROOT.TLatex(0.63, 0.96, "QCD (13.6 TeV)")
+    tex1.SetNDC()
+    tex1.SetTextFont(42)
+    tex1.SetLineWidth(2)
+    tex1.SetTextSize(0.024)
+    c1.cd()
+    tex1.Draw()
+
+    tex2 = ROOT.TLatex(0.16, 0.96, "Private work")
+    tex2.SetNDC()
+    tex2.SetTextFont(52)
+    tex2.SetTextSize(0.03)
+    tex2.SetLineWidth(2)
+    c1.cd()
+    tex2.Draw()
+
+
+    pred_leg = pred.Clone()
     pred_leg.SetFillColor(pred_band_noSyst.GetFillColor())
     pred_leg.SetFillStyle(pred_band_noSyst.GetFillStyle())
 
@@ -816,7 +857,7 @@ def main(argv):
     frameR.SetTitle("")
     frameR.SetStats(0)
     frameR.GetXaxis().SetTitle("")
-    frameR.GetYaxis().SetTitle("RatioR     ")
+    frameR.GetYaxis().SetTitle("RatioR  ")
     frameR.SetMaximum(2.)
     frameR.SetMinimum(0.0)
     frameR.GetYaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
@@ -864,7 +905,7 @@ def main(argv):
     frameR2.SetTitle("")
     frameR2.SetStats(0)
     frameR2.GetXaxis().SetTitle("")
-    frameR2.GetYaxis().SetTitle("obs / pred")
+    frameR2.GetYaxis().SetTitle("obs / pred ")
     frameR2.GetYaxis().SetRangeUser(0.,2.)
     frameR2.GetYaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
     frameR2.GetYaxis().SetLabelSize(12) #font size
@@ -928,22 +969,22 @@ def main(argv):
     frameR3.SetStats(0)
     frameR3.GetXaxis().SetTitle("")
     frameR3.GetXaxis().SetTitle("Mass (GeV)")
-    frameR3.GetXaxis().SetTitleOffset(5)
-    frameR3.GetYaxis().SetTitle("#frac{Data-pred}{#sigma}")
+    frameR3.GetYaxis().SetTitleOffset(1.3)
+    frameR3.GetYaxis().SetTitle("#frac{Data-pred}{#sigma} ")
     frameR3.GetYaxis().SetTickLength(frameR3.GetYaxis().GetTickLength()*2)
     frameR3.SetMaximum(3)
     frameR3.SetMinimum(-3)
     frameR3.GetYaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
     frameR3.GetYaxis().SetLabelSize(12) #font size
     frameR3.GetYaxis().SetTitleFont(43) #give the font size in pixel (instead of fraction)
-    frameR3.GetYaxis().SetTitleSize(16) #font size
+    frameR3.GetYaxis().SetTitleSize(14) #font size
     frameR3.GetYaxis().SetNdivisions(503)
     frameR3.GetXaxis().SetNdivisions(510)
     frameR3.GetXaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
     frameR3.GetXaxis().SetLabelSize(14) #font size
     frameR3.GetXaxis().SetTitleFont(43) #give the font size in pixel (instead of fraction)
-    frameR3.GetXaxis().SetTitleSize(20) #font size
-    frameR3.GetXaxis().SetTitleOffset(3.75)
+    frameR3.GetXaxis().SetTitleSize(15) #font size
+    frameR3.GetXaxis().SetTitleOffset(.85)
     frameR3.Draw("AXIS")
 
     if(blind==False):
@@ -993,17 +1034,16 @@ def main(argv):
     #LineFit4.Draw("same")
 
 
-    CMS_lumi.CMS_lumi(c1, iPeriod, iPos)
     if(a_==0):
         c1.Update()
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_lowmass_"+VERSION+".root")
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_lowmass_"+VERSION+".C")
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_lowmass_"+VERSION+".pdf")
+        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_lowmass_"+".root")
+        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_lowmass_"+".C")
+        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_lowmass_"+".pdf")
     else:
         c1.Update()
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_"+VERSION+".pdf")
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_"+VERSION+".root")
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_"+VERSION+".C")
+        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_"+".pdf")
+        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_"+".root")
+        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_"+".C")
 
     if(a_!=0):
         ratioSimpleH.Fit("pol1","QRS","",75,300)

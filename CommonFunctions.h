@@ -8,6 +8,8 @@
 
 #include "Regions.h"
 
+gErrorIgnoreLevel = kFatal;
+
 
 
 void loadHistograms(Region& r, TFile* f, const std::string& regionName, bool bool_rebin=true, int rebineta=1, int rebinp=1, int rebinih=1, int rebinmass=1)
@@ -230,7 +232,8 @@ TH2F meanHistoPE_2D(std::vector<TH2F> vPE)
     return h;
 }
 
-void bckgEstimate(const std::string& st_sample, 
+void bckgEstimate(const std::string& filename,
+                  const std::string& st_sample, 
                   const std::string& dirname,
                   const Region& B,
                   const Region& C,
@@ -244,6 +247,7 @@ void bckgEstimate(const std::string& st_sample,
                   const bool useFit = true,
                   const bool useOldIhFit = false,
                   const bool useOld1oPFit = false,
+                  const std::string& etaName = "",
                   const bool saveFits = false,
                   const bool& corrTemplateIh = false,
                   const bool& corrTemplateP = false,
@@ -293,9 +297,9 @@ void bckgEstimate(const std::string& st_sample,
 
 
     // Toys lambda function
-    auto workItem = [] (UInt_t workerID,const std::string& st_sample, const std::string& dirname, const Region& B, const Region& C, 
+    auto workItem = [] (UInt_t workerID, const std::string& filename, const std::string& st_sample, const std::string& dirname, const Region& B, const Region& C, 
                         const Region& BC, const Region& A, const Region& D, bool ifIhpSAME, const Region& B_ifIhpSAME, const std::string& st,
-                        const int& nPE = 200, const bool useFit = true, const bool useOldIhFit = false, const bool useOld1oPFit = false,
+                        const int& nPE = 200, const bool useFit = true, const bool useOldIhFit = false, const bool useOld1oPFit = false, const std::string& etaName = "",
                         const bool& saveFits = false, const bool& corrTemplateIh = false, const bool& corrTemplateP = false, const int& fitIh = 1,
                         const int& fitP = 1, bool blind = false, const int& rebinMass = 1, const double& par_p2 = 4.70839,const double& par_p3 = 1.05005)
                         -> std::tuple<TH1F, TH2F, float>
@@ -383,8 +387,8 @@ void bckgEstimate(const std::string& st_sample,
         // Mass prediction in the BC region
         bc.eta_p = c_eta_p;
         bc.ih_eta = b_ih_eta;
-        if(st.find("ias") != std::string::npos) bc.fillPredMass(st, st_sample, f_p, f_ihg, useFit, fitIh, fitP, -1, useOldIhFit, useOld1oPFit, saveFits);
-        else bc.fillPredMass(st, st_sample, f_p, f_ihg, useFit, fitIh, fitP, -1, useOldIhFit, useOld1oPFit, saveFits);
+        if(st.find("ias") != std::string::npos) bc.fillPredMass(filename, st, st_sample, f_p, f_ihg, useFit, fitIh, fitP, -1, useOldIhFit, useOld1oPFit, etaName, saveFits);
+        else bc.fillPredMass(filename, st, st_sample, f_p, f_ihg, useFit, fitIh, fitP, -1, useOldIhFit, useOld1oPFit, etaName, saveFits);
 
         float normA = a_ih_eta->Integral(0, a_ih_eta->GetNbinsX()+1, 0, a_ih_eta->GetNbinsY()+1);
         float normB = b_ih_eta->Integral(0, b_ih_eta->GetNbinsX()+1, 0, b_ih_eta->GetNbinsY()+1);
@@ -410,9 +414,9 @@ void bckgEstimate(const std::string& st_sample,
 
     
     // Loop on the toys
-    ROOT::TProcessExecutor workers(25);
-    auto workItemToRun = std::bind (workItem, _1, st_sample, dirname, B, C, BC, A, D, ifIhpSAME, B_ifIhpSAME, st, nPE,
-                                    useFit, useOldIhFit, useOldIhFit, saveFits, corrTemplateIh, corrTemplateP, fitIh, fitP, blind,
+    ROOT::TProcessExecutor workers(26);
+    auto workItemToRun = std::bind (workItem, _1, filename, st_sample, dirname, B, C, BC, A, D, ifIhpSAME, B_ifIhpSAME, st, nPE,
+                                    useFit, useOldIhFit, useOldIhFit, etaName, saveFits, corrTemplateIh, corrTemplateP, fitIh, fitP, blind,
                                     rebinMass, par_p2, par_p3);
     auto vPE = workers.Map(workItemToRun, ROOT::TSeqI(nPE));
 
