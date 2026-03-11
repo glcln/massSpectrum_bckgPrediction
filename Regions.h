@@ -259,7 +259,7 @@ void Region::fillPredMass(const std::string& filename,
         scale(p); //only scale one of the two distributions ih or p --> keep the information of the normalisation 
         if(ih->GetEntries() < 1 || p->GetEntries() < 1) continue;
 
-        float endIhFit = 6., end1oPFit = 30.;
+        float endIhFit = 6., end1oPFit = 30., start1oPFit = 5;
         
 
         // Ih fit
@@ -320,22 +320,31 @@ void Region::fillPredMass(const std::string& filename,
         {
             incrFit++;
 
-            end1oPFit = 0.4 * p->GetBinCenter(p->GetMaximumBin());
+            // start1oPFit = first bin with content + 4
+            for (int b = 1; b <= p->GetNbinsX(); b++) {
+                if (p->GetBinContent(b) > 0) {
+                    start1oPFit = p->GetBinCenter(b) + 4;
+                    break;
+                }
+            }
+            if (etaName != "_Eta1") start1oPFit = 0;
+            //end1oPFit = (etaName == "_Eta1")? 0.5 * p->GetBinCenter(p->GetMaximumBin()) : 0.4 * p->GetBinCenter(p->GetMaximumBin());
+            end1oPFit = 0.5 * p->GetBinCenter(p->GetMaximumBin());
             if (end1oPFit > 25) end1oPFit = 25;
             if (useOld1oPFit) end1oPFit = 30; // for the old fit
 
-            if (useFitP) ptr2 = p->Fit(&f_p, "QRS", "", 0, end1oPFit);
+            if (useFitP) ptr2 = p->Fit(&f_p, "QRS", "", start1oPFit, end1oPFit);
 
             TF1* f_p2 = &f_p;
 
             float intFp = 1;
             if (useFitP) {
                 ROOT::Math::IntegratorOneDim intOneDim_p(*f_p2, ROOT::Math::IntegrationOneDim::kGAUSS);
-                intFp = intOneDim_p.Integral(0, end1oPFit);
+                intFp = intOneDim_p.Integral(start1oPFit, end1oPFit);
                 if (intFp <= 0) std::cout << "ERROR > INTEGRAL FIT P IS <= 0.   ITG = " << intFp << std::endl;
             }
 
-            float intP = p->Integral(p->FindBin(0), p->FindBin(end1oPFit));
+            float intP = p->Integral(p->FindBin(start1oPFit), p->FindBin(end1oPFit));
             SFp = (intFp > 0)? intP/intFp : -1;
             if(SFp < 0) useFitP = false;
             f_p3 = f_p2;
