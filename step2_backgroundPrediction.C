@@ -17,7 +17,7 @@ gErrorIgnoreLevel = kFatal;
 
 
 
-void step2_backgroundPrediction(){
+void step2_backgroundPrediction() {
     ifstream infile;
     infile.open("configFile_readHisto_toLaunch.txt");
     std::string line;
@@ -75,8 +75,8 @@ void step2_backgroundPrediction(){
     cout << "useOldIhFit: " << useOldIhFit << ", useOld1oPFit: " << useOld1oPFit << endl;
     cout << "saveFits: " << saveFits << endl;
 
-    if (useOldIhFit || useOld1oPFit) outfilename_ += "_OldFit";
-    else if (!useOldIhFit && !useOld1oPFit) outfilename_ += "_NewFit";
+    if ((useOldIhFit || useOld1oPFit) && useFit) outfilename_ += "_OldFit";
+    else if ((!useOldIhFit && !useOld1oPFit) && useFit) outfilename_ += "_NewFit";
     else if (!useFit) outfilename_ += "_NoFit";
 
 
@@ -227,21 +227,22 @@ void step2_backgroundPrediction(){
     bool ifIhpSAME = true; // TRUE: Ih and p templates in C region but B still used for the normalisation
     
 
-        // In 9fp10 with A and C in 3fp8
-    //bckgEstimate(st_sample, dirname, rc_3fp8, rc_3fp8, rbc_9fp10, ra_3fp8, rd_9fp10, ifIhpSAME, rb_9fp10, "9fp10", nPE, useFit, corrTemplateIh, corrTemplateP, fitIh, fitP, blind);
-        // In 9fp10 with A and C in 3fp9
-    //bckgEstimate(st_sample, dirname, rc_3fp9, rc_3fp9, rbc_9fp10, ra_3fp9, rd_9fp10, ifIhpSAME, rb_9fp10, "9fp10", nPE, corrTemplateIh, corrTemplateP, fitIh, fitP, blind);
-
-
         // In 8fp9
-    bckgEstimate(DataSetName, st_sample, dirname, rc_3fp8, rc_3fp8, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
-                 "8fp9", nPE, useFit, useOldIhFit, useOldIhFit, etaName, saveFits, corrTemplateIh, corrTemplateP, fitIh, fitP, blind);
+    blind = false;
+    // bckgEstimate(DataSetName, st_sample, dirname, rc_3fp8, rc_3fp8, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
+    //              "8fp9", nPE, useFit, useOldIhFit, useOldIhFit, etaName, saveFits, corrTemplateIh, corrTemplateP, fitIh, fitP, blind);
+
+        // In 9fp10 with A and C in 3fp9
+    blind = true;
+    bckgEstimate(DataSetName, st_sample, dirname, rc_3fp9, rc_3fp9, rbc_9fp10, ra_3fp9, rd_9fp10, ifIhpSAME, rb_9fp10,
+                 "9fp10", nPE, useFit, useOldIhFit, useOldIhFit, etaName, saveFits, corrTemplateIh, corrTemplateP, fitIh, fitP, blind);
     
+
+
         // Only in C: no Ih reweighting in Region.h to change
     //bckgEstimate(st_sample, dirname, rc_3fp8, rc_3fp8, rbc_3fp8, rc_3fp8, rc_3fp8, ifIhpSAME, rc_3fp8, "3fp8", nPE, corrTemplateIh, corrTemplateP, fitIh, fitP, blind);
     
-    
-    delete ofile;
 
+    delete ofile;
     return;
 }

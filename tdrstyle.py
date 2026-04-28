@@ -1,35 +1,113 @@
-# QCD 2024
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-15to20_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-15to20_Fil-MuEnriched_CodeV16p1/260215_100420/0000" 
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-20to30_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-20to30_Fil-MuEnriched_CodeV16p1/260215_100442/0000" 
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-30to50_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-30to50_Fil-MuEnriched_CodeV16p1/260215_100504/0000" 
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-50to80_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-50to80_Fil-MuEnriched_CodeV16p1/260215_100527/0000" 
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-80to120_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-80to120_Fil-MuEnriched_CodeV16p1/260215_100550/0000" 
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-120to170_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-120to170_Fil-MuEnriched_CodeV16p1/260215_100612/0000" 
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-170to300_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-170to300_Fil-MuEnriched_CodeV16p1/260215_100635/0000" 
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-300to470_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-300to470_Fil-MuEnriched_CodeV16p1/260215_100657/0000" 
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-470to600_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-470to600_Fil-MuEnriched_CodeV16p1/260215_100719/0000" 
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-600to800_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-600to800_Fil-MuEnriched_CodeV16p1/260215_100742/0000"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-800to1000_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-800to1000_Fil-MuEnriched_CodeV16p1/260215_100805/0000"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/QCD_Bin-PT-1000_Fil-MuEnriched_TuneCP5_13p6TeV_pythia8/Analysis_QCD_Bin-PT-1000_Fil-MuEnriched_CodeV16p1/260215_100827/0000"
+import ROOT as rt
 
-# Wjets 2024
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-1J-PTLNu-40to100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-1J-PTLNu-40to100_CodeV14p6/260213_152755/0000/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-1J-PTLNu-40to100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-1J-PTLNu-40to100_CodeV14p6/260213_152755/0001/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-1J-PTLNu-100to200_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-1J-PTLNu-100to200_CodeV14p6/260213_152819/0000/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-1J-PTLNu-100to200_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-1J-PTLNu-100to200_CodeV14p6/260213_152819/0001/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-1J-PTLNu-200to400_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-1J-PTLNu-200to400_CodeV14p6/260213_152841/0000/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-1J-PTLNu-400to600_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-1J-PTLNu-400to600_CodeV14p7/260214_085812/0000/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-1J-PTLNu-600_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-1J-PTLNu-600_CodeV14p7/260214_085834/0000/"
+def tdrGrid( gridOn):
+  tdrStyle.SetPadGridX(gridOn)
+  tdrStyle.SetPadGridY(gridOn)
 
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-2J-PTLNu-40to100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-2J-PTLNu-40to100_CodeV14p6/260213_152949/0000/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-2J-PTLNu-40to100_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-2J-PTLNu-40to100_CodeV14p6/260213_152949/0001/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-2J-PTLNu-100to200_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-2J-PTLNu-100to200_CodeV14p6/260213_153013/0000/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-2J-PTLNu-100to200_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-2J-PTLNu-100to200_CodeV14p6/260213_153013/0001/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-2J-PTLNu-200to400_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-2J-PTLNu-200to400_CodeV14p6/260213_153036/0000/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-2J-PTLNu-400to600_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-2J-PTLNu-400to600_CodeV14p7/260214_085856/0000/"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/WtoLNu-2Jets_Bin-2J-PTLNu-600_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Analysis_WtoLNu-2Jets_Bin-2J-PTLNu-600_CodeV14p7/260214_085919/0000/"
+#fixOverlay: Redraws the axis
+def fixOverlay(): gPad.RedrawAxis()
 
-# TTbar 2024
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Analysis_TTto2L2Nu_CodeV15p5/260212_191231/0000"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Analysis_TTto2L2Nu_CodeV15p5/260212_191231/0001"
-"gfal-ls davs://sbgdcache.in2p3.fr/cms/phedex//store/user/gcoulon/HSCP/TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Analysis_TTto2L2Nu_CodeV15p5/260212_191231/0002"
+def setTDRStyle():
+  tdrStyle =  rt.TStyle("tdrStyle","Style for P-TDR")
+
+   #for the canvas:
+  tdrStyle.SetCanvasBorderMode(0)
+  tdrStyle.SetCanvasColor(rt.kWhite)
+  tdrStyle.SetCanvasDefH(600) #Height of canvas
+  tdrStyle.SetCanvasDefW(600) #Width of canvas
+  tdrStyle.SetCanvasDefX(0)   #POsition on screen
+  tdrStyle.SetCanvasDefY(0)
+
+
+  tdrStyle.SetPadBorderMode(0)
+  tdrStyle.SetPadColor(rt.kWhite)
+  tdrStyle.SetPadGridX(False)
+  tdrStyle.SetPadGridY(False)
+  tdrStyle.SetGridColor(0)
+  tdrStyle.SetGridStyle(3)
+  tdrStyle.SetGridWidth(1)
+
+#For the frame:
+  tdrStyle.SetFrameBorderMode(0)
+  tdrStyle.SetFrameBorderSize(1)
+  tdrStyle.SetFrameFillColor(0)
+  tdrStyle.SetFrameFillStyle(0)
+  tdrStyle.SetFrameLineColor(1)
+  tdrStyle.SetFrameLineStyle(1)
+  tdrStyle.SetFrameLineWidth(1)
+  
+#For the histo:
+  tdrStyle.SetHistLineColor(1)
+  tdrStyle.SetHistLineStyle(0)
+  tdrStyle.SetHistLineWidth(1)
+  tdrStyle.SetEndErrorSize(2)
+  tdrStyle.SetMarkerStyle(20)
+  
+#For the fit/function:
+  tdrStyle.SetOptFit(1)
+  tdrStyle.SetFitFormat("5.4g")
+  tdrStyle.SetFuncColor(2)
+  tdrStyle.SetFuncStyle(1)
+  tdrStyle.SetFuncWidth(1)
+
+#For the date:
+  tdrStyle.SetOptDate(0)
+
+# For the statistics box:
+  tdrStyle.SetOptFile(0)
+  tdrStyle.SetOptStat(0) # To display the mean and RMS:   SetOptStat("mr")
+  tdrStyle.SetStatColor(rt.kWhite)
+  tdrStyle.SetStatFont(42)
+  tdrStyle.SetStatFontSize(0.025)
+  tdrStyle.SetStatTextColor(1)
+  tdrStyle.SetStatFormat("6.4g")
+  tdrStyle.SetStatBorderSize(1)
+  tdrStyle.SetStatH(0.1)
+  tdrStyle.SetStatW(0.15)
+
+# Margins:
+  tdrStyle.SetPadTopMargin(0.05)
+  tdrStyle.SetPadBottomMargin(0.13)
+  tdrStyle.SetPadLeftMargin(0.16)
+  tdrStyle.SetPadRightMargin(0.02)
+
+# For the Global title:
+  tdrStyle.SetOptTitle(0)
+  tdrStyle.SetTitleFont(42)
+  tdrStyle.SetTitleColor(1)
+  tdrStyle.SetTitleTextColor(1)
+  tdrStyle.SetTitleFillColor(10)
+  tdrStyle.SetTitleFontSize(0.05)
+
+# For the axis titles:
+  tdrStyle.SetTitleColor(1, "XYZ")
+  tdrStyle.SetTitleFont(42, "XYZ")
+  tdrStyle.SetTitleSize(0.06, "XYZ")
+  tdrStyle.SetTitleXOffset(0.9)
+  tdrStyle.SetTitleYOffset(1.25)
+
+# For the axis labels:
+  tdrStyle.SetLabelColor(1, "XYZ")
+  tdrStyle.SetLabelFont(42, "XYZ")
+  tdrStyle.SetLabelOffset(0.007, "XYZ")
+  tdrStyle.SetLabelSize(0.05, "XYZ")
+
+# For the axis:
+  tdrStyle.SetAxisColor(1, "XYZ")
+  tdrStyle.SetStripDecimals(True)
+  tdrStyle.SetTickLength(0.03, "XYZ")
+  tdrStyle.SetNdivisions(510, "XYZ")
+  tdrStyle.SetPadTickX(1)  # To get tick marks on the opposite side of the frame
+  tdrStyle.SetPadTickY(1)
+
+# Change for log plots:
+  tdrStyle.SetOptLogx(0)
+  tdrStyle.SetOptLogy(0)
+  tdrStyle.SetOptLogz(0)
+
+# Postscript options:
+  tdrStyle.SetPaperSize(20.,20.)
+  tdrStyle.SetHatchesLineWidth(5)
+  tdrStyle.SetHatchesSpacing(0.05)
+
+  tdrStyle.cd()

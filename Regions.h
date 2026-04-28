@@ -25,13 +25,11 @@ float systErr_ = 0.; //set to 0 for systematic studies
 
 
 // Scale the 1D-histogram given to the unit 
-void scale(TH1F* h)
-{
+void scale(TH1F* h) {
     h->Scale(1./h->Integral(0,h->GetNbinsX()+1));
 }
 
-void corrIh(TH2F* ih_eta)
-{
+void corrIh(TH2F* ih_eta) {
     TF1 f_correlationPtIh("f_correlationPtIh","pol1",3,8);
     f_correlationPtIh.SetParameter(0,1.2);
     f_correlationPtIh.SetParameter(1,-5.3e-2);
@@ -42,8 +40,7 @@ void corrIh(TH2F* ih_eta)
     }
 }
 
-void corrP(TH2F* eta_p)
-{
+void corrP(TH2F* eta_p) {
     TF1 f_correlationPIas("f_correlationPIas","pol1",0,200);
     f_correlationPIas.SetParameter(0,9.8e-1);
     f_correlationPIas.SetParameter(1,2.4e-4);
@@ -54,7 +51,7 @@ void corrP(TH2F* eta_p)
     }
 }
 
-void blindMass(TH1F* h_m,float mass_value=300){
+void blindMass(TH1F* h_m, float mass_value=300) {
     for(int i=0; i<h_m->GetNbinsX()+2; i++){
         if(h_m->GetBinLowEdge(i)>=mass_value) {
             h_m->SetBinContent(i,0);
@@ -143,8 +140,7 @@ class Region{
 Region::Region(){}
 
 
-Region::Region(TFileDirectory &dir, std::string suffix, int& etabins, int& ihbins, int& pbins, int& massbins)
-{
+Region::Region(TFileDirectory &dir, std::string suffix, int& etabins, int& ihbins, int& pbins, int& massbins) {
     suffix_ = suffix;
     initHisto(dir,etabins,ihbins,pbins,massbins);
 } 
@@ -152,8 +148,7 @@ Region::Region(TFileDirectory &dir, std::string suffix, int& etabins, int& ihbin
 Region::~Region(){}
 
 
-void Region::initHisto(TFileDirectory &dir, int etabins, int ihbins, int pbins, int massbins)
-{
+void Region::initHisto(TFileDirectory &dir, int etabins, int ihbins, int pbins, int massbins) {
     TH1::SetDefaultSumw2(kTRUE);
     TH2::SetDefaultSumw2(kTRUE);
     TH3::SetDefaultSumw2(kTRUE);
@@ -196,8 +191,7 @@ void Region::initHisto(TFileDirectory &dir, int etabins, int ihbins, int pbins, 
 }
 
 
-void Region::fill(float& eta, float& p, float& pt, float& pterr, float& ih, float& ias, float& m, float& w)
-{
+void Region::fill(float& eta, float& p, float& pt, float& pterr, float& ih, float& ias, float& m, float& w) {
    eta_p->Fill(p,eta,w);
    ih_eta->Fill(eta,ih,w);
    ih_p->Fill(p,ih,w);
@@ -323,14 +317,14 @@ void Region::fillPredMass(const std::string& filename,
             // start1oPFit = first bin with content + 4
             for (int b = 1; b <= p->GetNbinsX(); b++) {
                 if (p->GetBinContent(b) > 0) {
-                    start1oPFit = p->GetBinCenter(b) + 4;
+                    start1oPFit = p->GetBinCenter(b);
                     break;
                 }
             }
-            if (etaName != "_Eta1") start1oPFit = 0;
+            //if (etaName != "_Eta1") start1oPFit = 0;
             //end1oPFit = (etaName == "_Eta1")? 0.5 * p->GetBinCenter(p->GetMaximumBin()) : 0.4 * p->GetBinCenter(p->GetMaximumBin());
-            end1oPFit = 0.5 * p->GetBinCenter(p->GetMaximumBin());
-            if (end1oPFit > 25) end1oPFit = 25;
+            end1oPFit = 0.6 * p->GetBinCenter(p->GetMaximumBin());
+            //if (end1oPFit > 25) end1oPFit = 25;
             if (useOld1oPFit) end1oPFit = 30; // for the old fit
 
             if (useFitP) ptr2 = p->Fit(&f_p, "QRS", "", start1oPFit, end1oPFit);
@@ -356,7 +350,7 @@ void Region::fillPredMass(const std::string& filename,
 
         if (useFitP && statusFit != 0) {      // Bad fit
             if (saveFits) { OutputHisto->cd(); p->Write(); }
-            std::cout << "  Bad fit 1/p, eta = " << eta->GetBinCenter(i) << std::endl;
+            std::cout << "  Bad fit 1/p, eta = " << eta->GetBinCenter(i) << " " << p->GetName() << std::endl;
             useFitP = false;
         } else {                              // Good fit
             if (saveFits) { OutputHisto->cd(); p->Write(); }
@@ -508,8 +502,7 @@ void Region::fillPredMass(const std::string& filename,
 }
 
 
-void Region::write()
-{
+void Region::write() {
     eta_p->Write();
     ih_eta->Write();
     ih_p->Write();
