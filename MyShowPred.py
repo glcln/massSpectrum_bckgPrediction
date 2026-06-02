@@ -2,8 +2,10 @@ import ROOT
 import os
 
 regions = '8fp9'
-ifile = '/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24/JetMET2024_V12p24_cutIndex3_rebinEta4_rebinIh4_rebinP2_rebinMass1_EtaReweighting_Eta2p4_NewFit.root'
-odir = '/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24/Plots_2024_Fpix_Eta2p4_NewFit_NoC_Newbinning'
+option = '_etaAbs_chi2cut'
+
+ifile = '/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__8fp9' + option + '/Eta2p4/JetMET2024_V12p24_rebinEta4_rebinIh4_rebinP2_EtaReweighting_Eta2p4_NewFit.root'
+odir = '/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__8fp9' + option + '/Eta2p4/Plots_NewFit_' + regions
 labelName = "METanalysis_Eta2p4"
 
 

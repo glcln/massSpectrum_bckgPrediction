@@ -21,18 +21,19 @@ odir = [
 nPE = "200"
 
 config = [
-    #["nominal", "4", "4", "2", "0", "0", "1", "1", "1"],
-    #["etaup", "2", "4", "2", "0", "0", "1", "1", "1"],
-    #["etadown", "8", "4", "2", "0", "0", "1", "1", "1"],
-    #["ihup", "4", "2", "2", "0", "0", "1", "1", "1"],
-    #["ihdown", "4", "8", "2", "0", "0", "1", "1", "1"],
-    #["momup", "4", "4", "1", "0", "0", "1", "1", "1"],
-    #["momdown", "4", "4", "4", "0", "0", "1", "1", "1"],
-    #["useFit", "4", "4", "2", "0", "0", "1", "1", "0"],
-    #["FitIhUp", "4", "4", "2", "0", "0", "2", "1", "1"],
-    #["FitIhDown", "4", "4", "2", "0", "0", "0", "1", "1"],
-    #["FitMomUp", "4", "4", "2", "0", "0", "1", "2", "1"],
-    #["FitMomDown", "4", "4", "2", "0", "0", "1", "0", "1"],
+    #["nominal", "4", "4", "2", "1", "1", "1", "0"],
+    #["etaup", "2", "4", "2", "1", "1", "1", "0"],
+    #["etadown", "8", "4", "2", "1", "1", "1", "0"],
+    #["ihup", "4", "2", "2", "1", "1", "1", "0"],
+    #["ihdown", "4", "8", "2", "1", "1", "1", "0"],
+    #["momup", "4", "4", "1", "1", "1", "1", "0"],
+    #["momdown", "4", "4", "4", "1", "1", "1", "0"],
+    #["useFit", "4", "4", "2", "1", "1", "0", "0"],
+    #["FitIhUp", "4", "4", "2", "2", "1", "1", "0"],
+    #["FitIhDown", "4", "4", "2", "0", "1", "1", "0"],
+    #["FitMomUp", "4", "4", "2", "1", "2", "1", "0"],
+    #["FitMomDown", "4", "4", "2", "1", "0", "1", "0"],
+    #["corrTemplateIh", "4", "4", "2", "1", "1", "1", "1"],
 ]
 
 
@@ -52,11 +53,10 @@ for dataset in datasetList:
         os.system("sed -i 's|rebinEta|" + conf[1] + "|g' configFile_readHisto_toLaunch.txt")
         os.system("sed -i 's|rebinIh|" + conf[2] + "|g' configFile_readHisto_toLaunch.txt")
         os.system("sed -i 's|rebinMom|" + conf[3] + "|g' configFile_readHisto_toLaunch.txt")
-        os.system("sed -i 's|corrTemplateIh|" + conf[4] + "|g' configFile_readHisto_toLaunch.txt")
-        os.system("sed -i 's|corrTemplateMom|" + conf[5] + "|g' configFile_readHisto_toLaunch.txt")
-        os.system("sed -i 's|fitIh|" + conf[6] + "|g' configFile_readHisto_toLaunch.txt")
-        os.system("sed -i 's|fitMom|" + conf[7] + "|g' configFile_readHisto_toLaunch.txt")
-        os.system("sed -i 's|useFit|" + conf[8] + "|g' configFile_readHisto_toLaunch.txt")
+        os.system("sed -i 's|fitIh|" + conf[4] + "|g' configFile_readHisto_toLaunch.txt")
+        os.system("sed -i 's|fitMom|" + conf[5] + "|g' configFile_readHisto_toLaunch.txt")
+        os.system("sed -i 's|useFit|" + conf[6] + "|g' configFile_readHisto_toLaunch.txt")
+        os.system("sed -i 's|corrTemplateIh|" + conf[7] + "|g' configFile_readHisto_toLaunch.txt")
 
         os.system("cat configFile_readHisto_toLaunch.txt")
         os.system("time root -l -q -b step2_backgroundPrediction.C")    
@@ -70,7 +70,7 @@ original_lines = code.split('\n')
 config_start_index = original_lines.index('config = [')
 
 # Iterate through the configs
-for i in range(config_start_index + 1, config_start_index + 13):
+for i in range(config_start_index + 1, config_start_index + 14):
     # Uncomment the config line
     lines = original_lines[:]
     lines[i] = lines[i].replace('#', '')

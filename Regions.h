@@ -29,24 +29,17 @@ void scale(TH1F* h) {
     h->Scale(1./h->Integral(0,h->GetNbinsX()+1));
 }
 
-void corrIh(TH2F* ih_eta) {
-    TF1 f_correlationPtIh("f_correlationPtIh","pol1",3,8);
-    f_correlationPtIh.SetParameter(0,1.2);
-    f_correlationPtIh.SetParameter(1,-5.3e-2);
-    for(int i=0; i<ih_eta->GetNbinsX(); i++){
-        for(int j=0; j<ih_eta->GetNbinsY(); j++){
-            ih_eta->SetBinContent(i,j,ih_eta->GetBinContent(i,j)/f_correlationPtIh.Eval(ih_eta->GetYaxis()->GetBinCenter(j)));
-        }
-    }
-}
 
-void corrP(TH2F* eta_p) {
-    TF1 f_correlationPIas("f_correlationPIas","pol1",0,200);
-    f_correlationPIas.SetParameter(0,9.8e-1);
-    f_correlationPIas.SetParameter(1,2.4e-4);
-    for(int i=0; i<eta_p->GetNbinsX(); i++){
-        for(int j=0; j<eta_p->GetNbinsY(); j++){
-            eta_p->SetBinContent(i,j,eta_p->GetBinContent(i,j)/f_correlationPIas.Eval(eta_p->GetXaxis()->GetBinCenter(i)));
+void corrIh(TH2F* ih_eta)
+{
+    TF1 f_correlation_Ih_Fpix("f_correlation_Ih_Fpix","pol1",2,10);
+    f_correlation_Ih_Fpix.SetParameter(0, 1.15515);
+    f_correlation_Ih_Fpix.SetParameter(1, -0.0464627);
+
+    for(int bin_eta=0; bin_eta<ih_eta->GetNbinsX(); bin_eta++){
+        for(int bin_ih=0; bin_ih<ih_eta->GetNbinsY(); bin_ih++){
+            ih_eta->SetBinContent(bin_eta, bin_ih, 
+                                  ih_eta->GetBinContent(bin_eta, bin_ih) / f_correlation_Ih_Fpix.Eval(ih_eta->GetYaxis()->GetBinCenter(bin_ih)));
         }
     }
 }
@@ -271,9 +264,11 @@ void Region::fillPredMass(const std::string& filename,
             if (ptr1 && ptr1->Status() != 0) { // Bad fit
                 if (saveFits) { OutputHisto->cd(); ih->Write(); }
                 useFitIh = false;
+                //cout << "bad Ih:     " << f_ih.GetChisquare()/f_ih.GetNDF() << endl;
             }
             else {                             // Good fit
                 if (saveFits) { OutputHisto->cd(); ih->Write(); }
+                //cout << "Ih:     " << f_ih.GetChisquare()/f_ih.GetNDF() << endl;
             }
         }
         else {
@@ -352,9 +347,13 @@ void Region::fillPredMass(const std::string& filename,
             if (saveFits) { OutputHisto->cd(); p->Write(); }
             std::cout << "  Bad fit 1/p, eta = " << eta->GetBinCenter(i) << " " << p->GetName() << std::endl;
             useFitP = false;
+            //cout << "bad 1/p:     " << f_p.GetChisquare()/f_p.GetNDF() << endl;
         } else {                              // Good fit
             if (saveFits) { OutputHisto->cd(); p->Write(); }
+            //cout << "1/p:    " << f_p.GetChisquare()/f_p.GetNDF() << endl;
         }
+
+        //if (f_p.GetChisquare()/f_p.GetNDF() > 4.5) useFitP = false; // if chi2/ndf > 4.5 --> bad fit, don't use it (threshold set after looking at the distribution of chi2/ndf for all the fits)
 
         ROOT::Math::IntegratorOneDim* intOneDimFP3 = nullptr;
         if (useFitP) {

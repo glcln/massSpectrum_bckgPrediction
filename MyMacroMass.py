@@ -13,22 +13,16 @@ from ROOT import THStack, TCanvas, TLegend, TLatex, TPad, TH1, TH2, TLine
 import CMS_lumi, tdrstyle
 
 ROOT.gROOT.SetBatch(True)
-ROOT.gStyle.SetOptFit(1111)
+ROOT.gErrorIgnoreLevel = ROOT.kWarning + 1  # supprime les Info
+ROOT.Math.MinimizerOptions.SetDefaultPrintLevel(-1)
 
 tdrstyle.setTDRStyle()
 
-a_ = 0
-b_ = 1
 
-#year='2017'
-#year='2018'
-year='2017_2018'
-#year='ttbarwjets'
-#year='wjets'
-#year='ttbar'
 year = '2024'
 era = ''
-region_=""
+
+PlotSignal = False
 
 
 #----------------------------------------------------
@@ -122,7 +116,7 @@ def ratioHisto(h1,h2):
     return h3
 
 def ratioIntegral(h1,h2,systErr,upTo=-1):
-    h3=h2.Clone()
+    h3 = h1.Clone()
     h3.Reset()
     if(upTo==-1):
         bornUp=h1.GetNbinsX()+1
@@ -166,40 +160,32 @@ def pullOfHisto(h2,h1,systErr):
     return res
 
 def addSyst(h,syst):
-    res=h.Clone()
+    res = h.Clone()
     res.Sumw2(0)
     for i in range (0,h.GetNbinsX()+1):
         res.SetBinError(i,math.sqrt(h.GetBinError(i)*h.GetBinError(i)+res.GetBinContent(i)*res.GetBinContent(i)*syst*syst))
     return res
 
-def addHSyst(h,h_syst,hCorrBias):
-    res=h.Clone()
-    resD=h.Clone()
-    resU=h.Clone()
-    for i in range (0,h.GetNbinsX()+1):
-        syst=h_syst.GetBinContent(i)/100
-        j=i
-        while (h_syst.GetBinContent(j)/100==0):
-            j-=1
-            syst=h_syst.GetBinContent(j)/100
-        diffCorrBias = abs(hCorrBias.GetBinContent(i)-h.GetBinContent(i))
-        errorTotal = math.sqrt(h.GetBinError(i)*h.GetBinError(i)+res.GetBinContent(i)*res.GetBinContent(i)*syst*syst+pow(diffCorrBias,2))
-        res.SetBinError(i,errorTotal)
-        resD.SetBinContent(i,res.GetBinContent(i)-errorTotal)
-        resU.SetBinContent(i,res.GetBinContent(i)+errorTotal)
-    return (res,resD,resU)
-
-def addHSystSignal(h,h_syst):
-    res=h.Clone()
-    for i in range (0,h.GetNbinsX()+1):
-        syst=h_syst.GetBinContent(i)/100
-        j=i
-        while (h_syst.GetBinContent(j)/100==0):
-            j-=1
-            syst=h_syst.GetBinContent(j)/100
-        errorTotal = math.sqrt(h.GetBinError(i)*h.GetBinError(i)+res.GetBinContent(i)*res.GetBinContent(i)*syst*syst)
-        res.SetBinError(i,errorTotal)
-    return res
+def addHSyst(h, h_syst, hCorrBias):
+    res = h.Clone()
+    resD = h.Clone()
+    resU = h.Clone()
+    for i in range(0, h.GetNbinsX() + 1):
+        syst = h_syst.GetBinContent(i) / 100
+        j = i
+        while j > 1 and h_syst.GetBinContent(j) == 0:
+            j -= 1
+            syst = h_syst.GetBinContent(j) / 100
+        diffCorrBias = abs(hCorrBias.GetBinContent(i) - h.GetBinContent(i))
+        errorTotal = math.sqrt(
+            h.GetBinError(i)**2
+            + res.GetBinContent(i)**2 * syst**2
+            + diffCorrBias**2
+        )
+        res.SetBinError(i, errorTotal)
+        resD.SetBinContent(i, res.GetBinContent(i) - errorTotal)
+        resU.SetBinContent(i, res.GetBinContent(i) + errorTotal)
+    return (res, resD, resU)
 
 def testChi2with1(h,x=-1):
     chi2=0
@@ -213,17 +199,6 @@ def testChi2with1(h,x=-1):
         ndf+=1
     
     return (chi2,ndf,ROOT.TMath.Prob(chi2,ndf))
-
-def BiasCorrection(h):
-    for i in range (0,h.GetNbinsX()+1):
-        mass = h.GetBinLowEdge(i)
-        if(mass<25): continue
-
-        #print(h.GetName(), ' mass: ',  mass, 'value: ', h.GetBinContent(i)*(a_*mass+b_))
-        #h.SetBinContent(i,h.GetBinContent(i)*(a_*mass+b_))
-        if(a_*mass+b_>0): h.SetBinContent(i,h.GetBinContent(i)*(a_*mass+b_))
-        else: h.SetBinContent(i,h.GetBinContent(i))
-        #h.SetBinContent(i,h.GetBinContent(i))
 
 def blindAnyUp(h,m):
     for i in range (0,h.GetNbinsX()+1):
@@ -270,15 +245,16 @@ def main(argv):
     region = ''
     odir = ''
     labelName = ''
+    nominalOnly = True
 
     try:
-        opts, args = getopt.getopt(argv,"hi:o:r:d",["ifile=","labelName=","ofile=","region=","odir="])
+        opts, args = getopt.getopt(argv,"hi:o:r:d",["ifile=","labelName=","ofile=","region=","odir=", "nom="])
     except getopt.GetoptError:
-        print ('test.py -i <inputfile> -e <labelName> -o <outputfile> -r <region> -d <odir>')
+        print ('test.py -i <inputfile> -e <labelName> -o <outputfile> -r <region> -d <odir> -n <nominalOnly>')
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
-            print ('test.py -i <inputfile> -e <labelName> -o <outputfile> -r <region> -d <odir>')
+            print ('test.py -i <inputfile> -e <labelName> -o <outputfile> -r <region> -d <odir> -n <nominalOnly>')
             sys.exit()
         elif opt in ("-i", "--ifile"):
             inputfile = arg
@@ -290,192 +266,79 @@ def main(argv):
             region = arg
         elif opt in ("-d", "--odir"):
             odir = arg
+        elif opt in ("-n", "--nom"):
+            nominalOnly = arg.lower() in ("true", "1", "yes")
 
-    os.system('mkdir -p '+odir)
-    outputfile = odir+'/'+outputfile
+    os.system('mkdir -p ' + odir)
+    outputfile = odir + '/' + outputfile
 
     print (' Input file: ', inputfile)
     print ('Output file: ', outputfile)
     print ('     Region: ', region)
-    print ('' )
 
-    signal = True
-    blind = False
-    isBinWidth = False
-    doRebin = True
-    isData = True
+    blind       = False
+    isBinWidth  = False
+    doRebin     = True
+    isData      = True
+    labelRegion = region
+    signal      = False
+    option      = "_etaAbs_chi2cut"
 
-    labelRegion=""
-    regSignal="VR1"
-    
-    if(region=="8fp9" and a_==0):
-        labelRegion="8fp9"
-        regSignal="VR1"
-    elif(region=="8fp9" and a_!=0):
-        labelRegion="8fp9"  
-        regSignal="VR1"
-
-    if(region=="3fp8" and a_==0):
-        labelRegion="3fp8"
-        regSignal="VR1"
-    elif(region=="3fp8" and a_!=0):
-        labelRegion="3fp8"  
-        regSignal="VR1"
-    
-    if(region=="50ias60" and a_==0):
-        labelRegion="RBF(50-60)"
-        regSignal="VR4"
-    elif(region=="50ias60" and a_!=0):
-        labelRegion="SR(50-60)"  
-        regSignal="VR4"
-
-    if(region=="60ias70" and a_==0):
-        labelRegion="RBF(60-70)"
-        regSignal="VR5"
-    elif(region=="60ias70" and a_!=0):
-        labelRegion="SR(60-70)"  
-        regSignal="VR5"
-
-    if(region=="70ias80" and a_==0):
-        labelRegion="RBF(70-80)"
-        regSignal="VR6"
-    elif(region=="70ias80" and a_!=0):
-        labelRegion="SR(70-80)"  
-        regSignal="VR6"
-
-    if(region=="80ias90" and a_==0):
-        labelRegion="RBF(80-90)"
-        regSignal="VR7"
-    elif(region=="80ias90" and a_!=0):
-        labelRegion="SR(80-90)"  
-        regSignal="VR7"
-
-    if(region=="50ias90" and a_==0):
-        labelRegion="RBF(50-90)"
-        regSignal="VR1"
-        signal=True
-    elif(region=="50ias90" and a_!=0):
-        labelRegion="SR(50-90)" 
-        regSignal="VR1"
-        signal=True
-
-    if(region=="90ias100" and a_==0):
-        labelRegion="RBF(90-100)"
-        regSignal="SR1"
-        signal=True
-    elif(region=="90ias100" and a_!=0):
-        labelRegion="SR(90-100)"
-        regSignal="SR1"  
-        signal=True
-
-    if(region=="99ias100" and a_==0):
-        labelRegion="RBF(99-100)"
-        regSignal="SR2"
-        signal=True
-    elif(region=="99ias100" and a_!=0):
-        labelRegion="SR(99-100)"   
-        regSignal="SR2"
-        signal=True
-    
-    if(region=="999ias100" and a_==0):
-        labelRegion="RBF(99.9-100)"
-        regSignal="SR3"
-        signal=True
-    elif(region=="999ias100" and a_!=0):
-        labelRegion="Mass approach Signal Region"     
-        regSignal="SR3"
-        signal=True
-
-    region_ = labelRegion
-    signal = False
 
     ifile = ROOT.TFile(inputfile)
     
-    obs = ifile.Get("mass_obs_"+region)
-    pred = ifile.Get("mass_predBC_"+region)
-    if (region=="80ias90"): C_mass = ifile.Get("mass_regionC_ias50_" + labelName)
-    elif (region=="8fp9"): C_mass = ifile.Get("mass_regionC_3fp8_" + labelName)
-    else: C_mass = ifile.Get("mass_obs_"+region)
+    obs = ifile.Get("mass_obs_" + region)
+    pred = ifile.Get("mass_predBC_" + region)
+    
+    if (region=="8fp9"): C_mass = ifile.Get("mass_regionC_3fp8_" + labelName)
+    else: C_mass = ifile.Get("mass_obs_" + region)
     pred_noSyst = addSyst(pred,0.0)
 
 
-
-    idirSignalGlu = "/opt/sbg/cms/ui3_data1/gcoulon/HSCP_prod/UnblindedProd/V1p1/HSCPgluino_V1p1/"
-    idirSignalStau = "/opt/sbg/cms/ui3_data1/gcoulon/HSCP_prod/UnblindedProd/V1p1/HSCPpairStau_V1p1/"
-
-    ifileGl2400 = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/output/Gluino2400_massCut_0_pT70_V5p1_Fpix_Eta2p4_Scale.root")
-    ifileGl1600 = ROOT.TFile(idirSignalGlu+"HSCPgluino_M-1600_merged.root")
     ifileGl2000 = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/output/Gluino2000_massCut_0_pT70_V5p0_Fpix_Eta2p4_Scale.root")
-    ifilePPStau557 = ROOT.TFile(idirSignalStau+"HSCPpairStau_M-557_merged.root")
-    ifilePPStau871 = ROOT.TFile(idirSignalStau+"HSCPpairStau_M-871_merged.root")
-
-    ntupleDir = "HSCParticleAnalyzer/BaseName/"
-
-    PlotSignal = False
-
-    m_Gl2400 = ifileGl2400.Get("mass_regionD_"+region+"_METContainingMu")
-    m_Gl1600 = ifileGl1600.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
     m_Gl2000 = ifileGl2000.Get("mass_regionD_"+region+"_METContainingMu")
-    m_ppStau557 = ifilePPStau557.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
-    m_ppStau871 = ifilePPStau871.Get(ntupleDir+"PostS_"+regSignal+"_Mass")
 
 
     # -------------- Work on histograms --------------
-
-
-    #rebinning=array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.])
-    #rebinning=array.array('d',[0.,40.,80.,120.,160.,200.,240.,280.,320.,360.,420.,480.,540.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
     rebinning=array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
 
 
-    sizeRebinning=len(rebinning)-1
+    sizeRebinning = len(rebinning)-1
     
     if(doRebin==True):
-        pred=pred.Rebin(sizeRebinning,"pred_new",rebinning)
-        pred_noSyst=pred_noSyst.Rebin(sizeRebinning,"pred_noSyst_new",rebinning)
-        obs=obs.Rebin(sizeRebinning,"obs_new",rebinning)
-        C_mass = C_mass.Rebin(sizeRebinning,"C_mass_new",rebinning)
+        pred        = pred.Rebin(sizeRebinning,"pred_new",rebinning)
+        pred_noSyst = pred_noSyst.Rebin(sizeRebinning,"pred_noSyst_new",rebinning)
+        obs         = obs.Rebin(sizeRebinning,"obs_new",rebinning)
+        C_mass      = C_mass.Rebin(sizeRebinning,"C_mass_new",rebinning)
 
     normSignal = 1
-    if(year=="2017_2018"): normSignal = 1
     if(year=="2024"):
-        if (era=="F"): normSignal=25.40/100
-        elif (era=="G"): normSignal=34.4/100
-    if(year=="2018"): normSignal=59.7/101
-    elif(year=="2017"): normSignal=41.5/101
+        if (era=="F"): normSignal = 25.40/100
+        elif (era=="G"): normSignal = 34.4/100
     
     if (PlotSignal):
-        m_Gl2400.Scale(normSignal)
         m_Gl2000.Scale(normSignal)
-    m_Gl1600.Scale(normSignal)
-    m_ppStau557.Scale(normSignal)
-    m_ppStau871.Scale(normSignal)
 
     if(doRebin==True):
         if (PlotSignal):
-            m_Gl2400=m_Gl2400.Rebin(sizeRebinning,"Gl2400_new",rebinning)
-            m_Gl2000=m_Gl2000.Rebin(sizeRebinning,"Gl2000_new",rebinning)
-        m_Gl1600=m_Gl1600.Rebin(sizeRebinning,"Gl1600_new",rebinning)
-        m_ppStau557=m_ppStau557.Rebin(sizeRebinning,"ppStau557_new",rebinning)
-        m_ppStau871=m_ppStau871.Rebin(sizeRebinning,"ppStau871_new",rebinning)
-
-    regionSyst=region
-    if(region=="50ias60"): regionSyst="90ias100"
-    if(region=="60ias70"): regionSyst="90ias100"
-    if(region=="70ias80"): regionSyst="90ias100"
-    if(region=="80ias90"): regionSyst="90ias100"
-    if(region=="50ias90"): regionSyst="90ias100"
-    if("fp" in region): regionSyst="90ias100"
-    if(region=="8fp9" and not ("MET" in inputfile)): regionSyst="8fp9"
-    yearSyst = year
-    if(year=="2017_2018"): yearSyst="2018"
+            m_Gl2000 = m_Gl2000.Rebin(sizeRebinning,"Gl2000_new",rebinning)
 
 
-    ifileSyst = ROOT.TFile("systBckg/sysTotBinned_2017_2018_8fp9_MET.root")
-    if (year != "2024"): ifileSyst = ROOT.TFile("systBckg/sysTotBinned_"+yearSyst+"_"+regionSyst+".root")
-    if(region=="8fp9" and ("MET" in inputfile)): ifileSyst = ROOT.TFile("systBckg/sysTotBinned_2017_2018_8fp9_MET.root")
-    if(region=="8fp9" and ("OnlyMET" in inputfile)): ifileSyst = ROOT.TFile("systBckg/sysTotBinned_2017_2018_8fp9_OnlyMET.root")
-    print("syst. file: ", ifileSyst.GetName())
+
+    ifileSyst = None
+    if (region=="8fp9" and not ("MET" in inputfile)):
+        print("faire les syst d'abord !")
+    if (("MET" in inputfile) and ("/Eta2p4/" in inputfile)):
+        ifileSyst = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta2p4/SystCombined/sysTotBinned_2024_" + region + ".root")
+    elif (("MET" in inputfile) and ("/Eta1_2p4/" in inputfile)):
+        ifileSyst = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta1_2p4/SystCombined/sysTotBinned_2024_" + region + ".root")
+    elif (("MET" in inputfile) and ("/Eta1/" in inputfile)):
+        ifileSyst = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta1/SystCombined/sysTotBinned_2024_" + region + ".root")
+
+    if ifileSyst is None:
+        raise RuntimeError(f"Aucun fichier syst trouvé pour region='{region}', inputfile='{inputfile}'")
+
+    
     histoOfSyst = ifileSyst.Get("systTotalBinned")
 
     pred_noCorrBias = pred.Clone()
@@ -483,23 +346,25 @@ def main(argv):
     obs_noBlind = obs.Clone("_obsnoBlind")
 
 
-    biasCorr = False
-    if(a_==0):
-        blindMassUp(obs,300)
-        blindMassUp(C_mass,300)
-        blindMassUp(pred,300)
+    if (not nominalOnly):
+        (pred, predD, predU) = addHSyst(pred, histoOfSyst, pred_noCorrBias)
+        (pred_noBlind, pred_noBlindU, pred_noBlindD) = addHSyst(pred_noBlind, histoOfSyst, pred_noCorrBias)
+        print(" syst. file: ", ifileSyst.GetName())
     else:
-        if(biasCorr==True):
-            print ("Correction bias: ON")
-            BiasCorrection(pred)
-            BiasCorrection(pred_noBlind)
-        else: print ("Correction bias: OFF")
-    
-    if(a_<0): BiasCorrection(pred_noCorrBias)
+        print(" /!\ only nominal")
 
+        ifileSystnom = None
+        if (("MET" in inputfile) and ("/Eta2p4/" in inputfile)):
+            ifileSystnom = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta2p4/SystCombined/sysToTBinned_2024_" + region + ".root")
+        elif (("MET" in inputfile) and ("/Eta1_2p4/" in inputfile)):
+            ifileSystnom = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta1_2p4/SystCombined/sysToTBinned_2024_" + region + ".root")
+        elif (("MET" in inputfile) and ("/Eta1/" in inputfile)):
+            ifileSystnom = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta1/SystCombined/sysToTBinned_2024_" + region + ".root")
+        print(" syst. file: ", ifileSystnom.GetName())
 
-    (pred,predD,predU)=addHSyst(pred,histoOfSyst,pred_noCorrBias)
-    (pred_noBlind,pred_noBlindU,pred_noBlindD)=addHSyst(pred_noBlind,histoOfSyst,pred_noCorrBias)
+        histoOfSystnom = ifileSystnom.Get("Stat")
+        (pred, predD, predU) = addHSyst(pred, histoOfSystnom, pred_noCorrBias)
+        (pred_noBlind, pred_noBlindU, pred_noBlindD) = addHSyst(pred_noBlind, histoOfSystnom, pred_noCorrBias)
 
     err_obs_m300 = ctypes.c_double(0)
     obs_m300 = obs_noBlind.IntegralAndError(obs_noBlind.FindBin(300), obs_noBlind.GetNbinsX()+1, err_obs_m300)
@@ -509,55 +374,22 @@ def main(argv):
     pred_m300 = pred_noBlind.IntegralAndError(pred_noBlind.FindBin(300), pred_noBlind.GetNbinsX()+1, err_pred_m300)
     err_pred_m300 = err_pred_m300.value
 
-    predD.SetName("predD")
-    predU.SetName("predU")
 
-    mass_fit=300
-    if(a_==0):
-        min_mass=0
-        max_mass=300
-    else:
-        min_mass=0
-        #max_mass=2000
-        max_mass=4000
-        if(doRebin==False):    
-            max_mass=2500
+    mass_fit=4000
+    min_mass=0
+    max_mass=4000
+    if(doRebin==False):    
+        max_mass=2500
 
     underflowAndOverflow(obs,True, max_mass)
     underflowAndOverflow(C_mass,True, max_mass)
     underflowAndOverflow(pred, False, max_mass) 
     underflowAndOverflow(pred_noSyst, False, max_mass) 
 
-    h_syst_gl2400 = ROOT.TFile("systSignal/Gluino_M-2400/SR1_73p0/_sysTot.root").Get("c1_n4").GetPrimitive("")
-    h_syst_gl1600 = ROOT.TFile("systSignal/Gluino_M-1600/SR1_73p0/_sysTot.root").Get("c1_n5").GetPrimitive("")
-    h_syst_gl2000 = ROOT.TFile("systSignal/Gluino_M-2000/SR1_73p0/_sysTot.root").Get("c1_n9").GetPrimitive("")
-    h_syst_ppStau557 = ROOT.TFile("systSignal/ppStau_M-557/SR1_73p0/_sysTot.root").Get("c1_n11").GetPrimitive("")
-    h_syst_ppStau871 = ROOT.TFile("systSignal/ppStau_M-871/SR1_73p0/_sysTot.root").Get("c1_n14").GetPrimitive("")
 
     if (PlotSignal):
-        m_Gl2400 = addHSystSignal(m_Gl2400,h_syst_gl2400)
-        m_Gl2000 = addHSystSignal(m_Gl2000,h_syst_gl2000)  
-    m_Gl1600 = addHSystSignal(m_Gl1600,h_syst_gl1600)    
-    m_ppStau557 = addHSystSignal(m_ppStau557,h_syst_ppStau557)    
-    m_ppStau871 = addHSystSignal(m_ppStau871,h_syst_ppStau871)    
-
-    if (PlotSignal):
-        underflowAndOverflow(m_Gl2400, False, max_mass)
         underflowAndOverflow(m_Gl2000, False, max_mass)
-    underflowAndOverflow(m_Gl1600, False, max_mass)
-    underflowAndOverflow(m_ppStau557, False, max_mass)
-    underflowAndOverflow(m_ppStau871, False, max_mass)
-
-    listOfMarkerGluino = [21, 22, 29, 23, 33, 34, 39, 47, 43]
-    listOfMarkePPStau = [21, 22, 29, 23, 33, 34, 39, 47, 43, 44]
-
-    if (PlotSignal):
-        m_Gl2400 = setColorAndMarker(m_Gl2400,46,listOfMarkerGluino[4])
-        m_Gl2000 = setColorAndMarker(m_Gl2000,28,listOfMarkerGluino[2])
-    m_Gl1600 = setColorAndMarker(m_Gl1600,28,listOfMarkerGluino[2])
-    m_ppStau557 = setColorAndMarker(m_ppStau557,8,listOfMarkePPStau[3])
-    m_ppStau871 = setColorAndMarker(m_ppStau871,31,listOfMarkePPStau[6])
-
+        m_Gl2000 = setColorAndMarker(m_Gl2000, 28, 22)
 
 
     # Poisson errors for the observed distribution
@@ -590,14 +422,14 @@ def main(argv):
 
 
     
-    ratioSimpleH = ratioHisto(obs,pred)
+    ratioSimpleH    = ratioHisto(obs,pred)
     ratio_massC_obs = ratioHisto(C_mass,pred)
 
-    pull = pullOfHisto(obs,pred,0.)
+    pull  = pullOfHisto(obs,pred,0.)
     pullC = pullOfHisto(C_mass,pred,0.)
 
-    ratioInt = ratioIntegral(obs,pred,0.,-1)
-    ratioIntC = ratioIntegral(C_mass,pred,0.,-1)
+    ratioInt  = ratioIntegral(obs,    pred, 0., mass_fit)
+    ratioIntC = ratioIntegral(C_mass, pred, 0., mass_fit)
 
     if(isBinWidth):
         obs = binWidth(obs)
@@ -605,15 +437,29 @@ def main(argv):
         C_mass = binWidth(C_mass)
         pred_noSyst = binWidth(pred_noSyst)
         if (PlotSignal):
-            m_Gl2400 = binWidth(m_Gl2400)
             m_Gl2000 = binWidth(m_Gl2000)
-        m_Gl1600 = xbinWidth(m_Gl1600)
-        m_ppStau557 = binWidth(m_ppStau557)
-        m_ppStau871 = binWidth(m_ppStau871)
 
     pred_band=pred.Clone()
     pred_band_noSyst=pred_noSyst.Clone()
 
+
+    if blind:
+        obs_blind       = obs.Clone("obs_blind")
+        C_mass_blind    = C_mass.Clone("C_mass_blind")
+        ratioInt_blind  = ratioInt.Clone("ratioInt_blind")
+        ratioIntC_blind = ratioIntC.Clone("ratioIntC_blind")
+        ratioSimpleH_blind   = ratioSimpleH.Clone("ratioSimpleH_blind")
+        ratio_massC_blind    = ratio_massC_obs.Clone("ratio_massC_blind")
+        pull_blind  = pull.Clone("pull_blind")
+        pullC_blind = pullC.Clone("pullC_blind")
+        for h in [obs_blind, C_mass_blind, ratioInt_blind, ratioIntC_blind,
+                  ratioSimpleH_blind, ratio_massC_blind, pull_blind, pullC_blind]:
+            blindAnyUp(h, mass_fit)
+    else:
+        obs_blind, C_mass_blind        = obs, C_mass
+        ratioInt_blind, ratioIntC_blind = ratioInt, ratioIntC
+        ratioSimpleH_blind, ratio_massC_blind = ratioSimpleH, ratio_massC_obs
+        pull_blind, pullC_blind        = pull, pullC
 
     # -------------- Display --------------
        
@@ -716,34 +562,30 @@ def main(argv):
     pred.Draw("same HIST P")
     pred.SaveAs(odir+'/pred.root')
 
-    obs.SetMarkerStyle(20)
-    obs.SetMarkerColor(1)
-    obs.SetMarkerSize(1.0)
-    obs.SetLineColor(1)
-    obs.SetFillColor(0)
-    obs.GetXaxis().SetRange(min_mass,max_mass)
-    obs.GetXaxis().SetRangeUser(min_mass,max_mass)
-    C_mass.SetMarkerColor(8)
-    C_mass.SetLineColor(8)
-    C_mass.SetMarkerStyle(23)
+    obs_blind.SetMarkerStyle(20)
+    obs_blind.SetMarkerColor(1)
+    obs_blind.SetMarkerSize(1.0)
+    obs_blind.SetLineColor(1)
+    obs_blind.SetFillColor(0)
+    obs_blind.GetXaxis().SetRange(min_mass,max_mass)
+    obs_blind.GetXaxis().SetRangeUser(min_mass,max_mass)
+    C_mass_blind.SetMarkerColor(8)
+    C_mass_blind.SetLineColor(8)
+    C_mass_blind.SetMarkerStyle(23)
     if (region=="3fp8"): 
-        obs.SetMarkerColor(8)
-        obs.SetLineColor(8)
-        obs.SetMarkerStyle(23)
-    if(blind==False):
-        obs.Draw("same E1")
-        if (region == "8fp9" and PlotSignal):
-            m_Gl2400.Draw("same E1")
-            m_Gl2000.Draw("same E1")
-        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): C_mass.Draw("same E1")
+        obs_blind.SetMarkerColor(8)
+        obs_blind.SetLineColor(8)
+        obs_blind.SetMarkerStyle(23)
+    obs_blind.Draw("same E1")
+    if (region == "8fp9" and PlotSignal):
+        m_Gl2000.Draw("same E1")
+    if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
+        C_mass_blind.Draw("same E1")
 
-    obs.SaveAs(odir+'/obs.root')
+    obs_blind.SaveAs(odir+'/obs_blind.root')
     
     if(signal==True):
-        m_Gl1600.Draw("same E1")
         m_Gl2000.Draw("same E1")
-        m_ppStau557.Draw("same E1")
-        m_ppStau871.Draw("same E1")
 
     leg=TLegend(0.5,0.75,0.8,0.95)
     leg.SetFillStyle(0)
@@ -755,22 +597,19 @@ def main(argv):
 
     tex1 = ROOT.TLatex(0.85, 0.96, "(13.6 TeV)")
     if (year == "2024"):
-        tex1 = ROOT.TLatex(0.63, 0.96, "2024 - 105.8 fb^{-1} (13.6 TeV)")
+        tex1 = ROOT.TLatex(0.66, 0.96, "105.8 fb^{-1} (13.6 TeV)")
         if (era == "F"): tex1 = ROOT.TLatex(0.63, 0.96, "2024F - 25.40 fb^{-1} (13.6 TeV)")
         if (era == "G"): tex1 = ROOT.TLatex(0.63, 0.96, "2024G - 34.4 fb^{-1} (13.6 TeV)")
-    elif(year == "wjets"): tex1 = ROOT.TLatex(0.63, 0.96, "W+jets (13.6 TeV)")
-    elif(year == "ttbar"): tex1 = ROOT.TLatex(0.63, 0.96, "t#bar{t} (13.6 TeV)")
-    elif(year == "qcd"): tex1 = ROOT.TLatex(0.63, 0.96, "QCD (13.6 TeV)")
     tex1.SetNDC()
     tex1.SetTextFont(42)
     tex1.SetLineWidth(2)
-    tex1.SetTextSize(0.024)
+    tex1.SetTextSize(0.03)
     c1.cd()
     tex1.Draw()
 
-    tex2 = ROOT.TLatex(0.16, 0.96, "Private work")
+    tex2 = ROOT.TLatex(0.15, 0.96, "#scale[1.3]{#bf{CMS}}#it{Simulation Work in progress}")
     tex2.SetNDC()
-    tex2.SetTextFont(52)
+    tex2.SetTextFont(42)
     tex2.SetTextSize(0.03)
     tex2.SetLineWidth(2)
     c1.cd()
@@ -781,58 +620,41 @@ def main(argv):
     pred_leg.SetFillColor(pred_band_noSyst.GetFillColor())
     pred_leg.SetFillStyle(pred_band_noSyst.GetFillStyle())
 
-    #print("INTEGRAL PREDICTION SR3 = {}".format(pred.Integral()))
-    if(blind==False and isData==False):
-        
-        if (region=="3fp8"): leg.AddEntry(obs,"Observed in C","PE1")
-        else: leg.AddEntry(obs,"Observed","PE1")
-        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): leg.AddEntry(C_mass,"Observed in C","PE1")
-    elif(blind==False and isData==True):
-        if (region=="3fp8"): leg.AddEntry(obs,"Observed in C","PE1")
-        else: leg.AddEntry(obs,"Observed","PE1")
-        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): leg.AddEntry(C_mass,"Observed in C","PE1")
-    if(a_==0):
-        if(biasCorr==True):
-            if(isData==True):
-                leg.AddEntry(pred_leg,"Data-based pred.","PE")
-            else:
-                leg.AddEntry(pred_leg,"Pred.","PF")
-    else:
-        if(isData==True):
-            #leg.AddEntry(pred_leg,"Data-based pred. w/ bias corr.","PF")
-            entry=leg.AddEntry(pred_leg,"Data-based pred.","PF")
-            entry.SetFillColor(5)
-            entry.SetFillStyle(1001)
-            entry.SetLineColor(5)
-            entry.SetLineStyle(1)
-            entry.SetLineWidth(1)
-            entry.SetMarkerColor(2)
-            entry.SetMarkerStyle(21)
-            entry.SetMarkerSize(1)
-            entry.SetTextFont(43)
+
+    if (region=="3fp8"): leg.AddEntry(obs_blind, "Observed in C", "PE1")
+    else: leg.AddEntry(obs_blind, "Observed", "PE1")
+    if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
+        leg.AddEntry(C_mass_blind, "Observed in C", "PE1")
+    
+    if(isData==True):
+        entry=leg.AddEntry(pred_leg,"Data-based pred.","PF")
+        entry.SetFillColor(5)
+        entry.SetFillStyle(1001)
+        entry.SetLineColor(5)
+        entry.SetLineStyle(1)
+        entry.SetLineWidth(1)
+        entry.SetMarkerColor(2)
+        entry.SetMarkerStyle(21)
+        entry.SetMarkerSize(1)
+        entry.SetTextFont(43)
  
-        else:
-            leg.AddEntry(pred_leg,"Pred. w/ bias corr.","PF")
 
     if (region == "8fp9" and PlotSignal):
-        leg.AddEntry(m_Gl2400,"#tilde{g} (M=2400 GeV)","PE1")
         leg.AddEntry(m_Gl2000,"#tilde{g} (M=2000 GeV)","PE1")
     if(signal==True):
-        leg.AddEntry(m_Gl1600,"#tilde{g} (M=1600 GeV)","PE1")
         leg.AddEntry(m_Gl2000,"#tilde{g} (M=2000 GeV)","PE1")
-        leg.AddEntry(m_ppStau557,"pair. #tilde{#tau} (M=557 GeV)","PE1")
-        leg.AddEntry(m_ppStau871,"pair. #tilde{#tau} (M=871 GeV)","PE1")
 
 
-    LineLastBin=TLine(obs.GetBinLowEdge(obs.FindBin(max_mass)-1),0,obs.GetBinLowEdge(obs.FindBin(max_mass)-1),max_entries)
+    LineLastBin=TLine(obs_blind.GetBinLowEdge(obs_blind.FindBin(max_mass)-1),0,obs_blind.GetBinLowEdge(obs_blind.FindBin(max_mass)-1),max_entries)
     LineLastBin.SetLineStyle(3)
     LineLastBin.SetLineColor(1)
 
     LineFit1=TLine(mass_fit,0,mass_fit,max_entries)
     LineFit1.SetLineStyle(1)
     LineFit1.SetLineColor(1)
-    #LineFit1.Draw("same")
-
+    
+    t1.cd()
+    if (blind): LineFit1.Draw("same")
     leg.Draw("same")
     
     t=ROOT.TText(0.95,0.7,"+overflow")
@@ -841,12 +663,6 @@ def main(argv):
     t.SetTextFont(43)
     t.SetTextSize(24)
     t.SetTextAngle(90)
-
-
-    LineAtOne=TLine(min_mass,1,max_mass,1)
-    LineAtOne.SetLineStyle(3)
-    LineAtOne.SetLineColor(1)
-    #LineAtOne.Draw("same")
 
 
 
@@ -874,27 +690,34 @@ def main(argv):
     frameR.GetXaxis().SetTitleOffset(3.75)
     frameR.Draw("AXIS")
 
-    ratioInt.SetMarkerStyle(21)
-    ratioInt.SetMarkerColor(1)
-    ratioInt.SetMarkerSize(0.7)
-    ratioInt.SetLineColor(1)
-    ratioInt.SetFillColor(0)
-    ratioIntC.SetMarkerStyle(23)
-    ratioIntC.SetMarkerColor(8)
-    ratioIntC.SetLineColor(8)
+    ratioInt_blind.SetMarkerStyle(21)
+    ratioInt_blind.SetMarkerColor(1)
+    ratioInt_blind.SetMarkerSize(0.7)
+    ratioInt_blind.SetLineColor(1)
+    ratioInt_blind.SetFillColor(0)
+    ratioIntC_blind.SetMarkerStyle(23)
+    ratioIntC_blind.SetMarkerColor(8)
+    ratioIntC_blind.SetLineColor(8)
     if (region=="3fp8"):
-        ratioInt.SetMarkerColor(8)
-        ratioInt.SetLineColor(8)
-        ratioInt.SetMarkerStyle(23)
-    if(blind==False):
-        ratioInt.Draw("same E0")
-        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): ratioIntC.Draw("same E0")
+        ratioInt_blind.SetMarkerColor(8)
+        ratioInt_blind.SetLineColor(8)
+        ratioInt_blind.SetMarkerStyle(23)
+    ratioInt_blind.Draw("same E0")
+    if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
+        ratioIntC_blind.Draw("same E0")
+
+    LineAtOne=TLine(min_mass,1,max_mass,1)
+    LineAtOne.SetLineStyle(3)
+    LineAtOne.SetLineColor(1)
     LineAtOne.Draw("same")
 
+    ratioInt_blind.GetXaxis().SetRange(min_mass,max_mass)
+    ratioInt_blind.GetXaxis().SetRangeUser(min_mass,max_mass)
 
-    #ratioInt.Draw("same E0")
-    ratioInt.GetXaxis().SetRange(min_mass,max_mass)
-    ratioInt.GetXaxis().SetRangeUser(min_mass,max_mass)
+    LineFit2 = TLine(mass_fit, 0, mass_fit, 2.)
+    LineFit2.SetLineStyle(1)
+    LineFit2.SetLineColor(1)
+    if (blind): LineFit2.Draw("same")
 
 
 
@@ -921,44 +744,38 @@ def main(argv):
     frameR2.GetXaxis().SetTitleOffset(3.75)
     frameR2.Draw("AXIS")
 
-    ratioSimpleH.Sumw2()
-    ratioSimpleH.SetMarkerStyle(21)
-    ratioSimpleH.SetMarkerColor(1)
-    ratioSimpleH.SetMarkerSize(0.7)
-    ratioSimpleH.SetLineColor(1)
-    ratioSimpleH.SetFillColor(0)
-    ratio_massC_obs.SetMarkerStyle(23)
-    ratio_massC_obs.SetMarkerColor(8)
-    ratio_massC_obs.SetLineColor(8)
+    ratioSimpleH_blind.Sumw2()
+    ratioSimpleH_blind.SetMarkerStyle(21)
+    ratioSimpleH_blind.SetMarkerColor(1)
+    ratioSimpleH_blind.SetMarkerSize(0.7)
+    ratioSimpleH_blind.SetLineColor(1)
+    ratioSimpleH_blind.SetFillColor(0)
+    ratio_massC_blind.SetMarkerStyle(23)
+    ratio_massC_blind.SetMarkerColor(8)
+    ratio_massC_blind.SetLineColor(8)
     if (region=="3fp8"):
-        ratioSimpleH.SetMarkerColor(8)
-        ratioSimpleH.SetLineColor(8)
-        ratioSimpleH.SetMarkerStyle(23)
+        ratioSimpleH_blind.SetMarkerColor(8)
+        ratioSimpleH_blind.SetLineColor(8)
+        ratioSimpleH_blind.SetMarkerStyle(23)
 
-    f=None
-    if(blind==False):
-        ratioSimpleH.Draw("same E0")
-        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): ratio_massC_obs.Draw("same E0")
-    #ratioSimpleH.Draw("same E0")
-    if(a_==0):
-        ratioSimpleH.Fit("pol1","RSQ0","same",50,250)
-    ratioSimpleH.GetXaxis().SetRange(min_mass,max_mass)
-    ratioSimpleH.GetXaxis().SetRangeUser(min_mass,max_mass)
+
+    ratioSimpleH_blind.Draw("same E0")
+    if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
+        ratio_massC_blind.Draw("same E0")
+    #ratioSimpleH_blind.Draw("same E0")
+    ratioSimpleH_blind.GetXaxis().SetRange(min_mass,max_mass)
+    ratioSimpleH_blind.GetXaxis().SetRangeUser(min_mass,max_mass)
 
     LineAtOne.Draw("same")
 
     LineFit3=TLine(mass_fit,0,mass_fit,2.)
     LineFit3.SetLineStyle(1)
     LineFit3.SetLineColor(1)
-    #LineFit3.Draw("same")
+    if (blind): LineFit3.Draw("same")
 
 
-
-    f=None
-    if(a_==0):
-        ratioSimpleH.Fit("pol1","RSQ0","same",50,250)
-    ratioSimpleH.GetXaxis().SetRange(min_mass,max_mass)
-    ratioSimpleH.GetXaxis().SetRangeUser(min_mass,max_mass)
+    ratioSimpleH_blind.GetXaxis().SetRange(min_mass,max_mass)
+    ratioSimpleH_blind.GetXaxis().SetRangeUser(min_mass,max_mass)
 
 
     c1.cd()
@@ -988,18 +805,17 @@ def main(argv):
     frameR3.GetXaxis().SetTitleOffset(.85)
     frameR3.Draw("AXIS")
 
-    if(blind==False):
-        pull.Draw("same HIST")
-        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)): pullC.Draw("same HIST")
+    pull_blind.Draw("same HIST")
+    if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
+        pullC_blind.Draw("same HIST")
 
-    pull.SetLineColor(1)
-    pull.SetFillColor(38)
+    pull_blind.SetLineColor(1)
+    pull_blind.SetFillColor(38)
     if (region=="3fp8"):
-        pull.SetFillColorAlpha(8, 0.35)
-        pull.SetLineColor(8)
-    pullC.SetLineColor(8)
-    pullC.SetFillColorAlpha(8, 0.35)
-    #blindAnyUp(pull,300)
+        pull_blind.SetFillColorAlpha(8, 0.35)
+        pull_blind.SetLineColor(8)
+    pullC_blind.SetLineColor(8)
+    pullC_blind.SetFillColorAlpha(8, 0.35)
     t4.RedrawAxis()
     t4.RedrawAxis("G")
 
@@ -1032,40 +848,27 @@ def main(argv):
     LineFit4=TLine(mass_fit,-3,mass_fit,3)
     LineFit4.SetLineStyle(1)
     LineFit4.SetLineColor(1)
-    #LineFit4.Draw("same")
+    if (blind): LineFit4.Draw("same")
 
 
-    if(a_==0):
-        c1.Update()
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_lowmass_"+".root")
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_lowmass_"+".C")
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_lowmass_"+".pdf")
-    else:
-        c1.Update()
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_"+".pdf")
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_"+".root")
-        c1.SaveAs(outputfile+"_region"+region+"_"+year+"_"+".C")
+    
+    c1.Update()
+    c1.SaveAs(outputfile + "_region" + region + "_" + year + "_" + ("onlyNominal" if nominalOnly else "") + ".pdf")
+    c1.SaveAs(outputfile + "_region" + region + "_" + year + "_" + ("onlyNominal" if nominalOnly else "") + ".root")
+    c1.SaveAs(outputfile + "_region" + region + "_" + year + "_" + ("onlyNominal" if nominalOnly else "") + ".C")
 
-    if(a_!=0):
-        ratioSimpleH.Fit("pol1","QRS","",75,300)
-    f=ratioSimpleH.GetFunction("pol1")
+    print("   Saved in: {}".format(odir))
+    print('')
 
     #Chi2ObsPred = obs.Chi2Test(pred,"UWP")
     #print("Chi2 between prediction and observation  = {}".format(Chi2ObsPred))
 
-    return (f.GetChisquare(),f.GetNDF(),f.GetParameter(1),f.GetParameter(0),f.GetParError(1),f.GetParError(0),labelRegion,region,obs_m300,pred_m300,err_obs_m300,err_pred_m300)
+    return (region, obs_m300, pred_m300, err_obs_m300, err_pred_m300)
 
 
 
 
 if __name__ == "__main__":
-    print ('----- First: bias correction')
-    (chi2,ndof,a,b,aerr,berr,region_,reg,obs_m300,pred_m300,err_obs_m300,err_pred_m300) = main(sys.argv[1:])
 
-    print ('')
-    print ('----- Second: full run')
-    print ('a = ', a, ' and b = ', b)
-    a_ = a
-    b_ = b
     odir = sys.argv[8]
-    (chi2,ndof,a,b,aerr,berr,region_,reg,obs_m300,pred_m300,err_obs_m300,err_pred_m300) = main(sys.argv[1:])
+    (reg, obs_m300, pred_m300, err_obs_m300, err_pred_m300) = main(sys.argv[1:])
