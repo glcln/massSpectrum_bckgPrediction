@@ -126,34 +126,54 @@ TH2F* FoldAbsTH2Y(TH2F* h, const std::string& newName) {
 }
 
 
-void loadHistograms(Region& r, TFile* f, const std::string& regionName, bool bool_rebin=true, int rebineta=1, int rebinp=1, int rebinih=1, bool TakeAbsEta = false) {
+void loadHistograms(Region& r, 
+                    TFile* f,
+                    const std::string& regionName,
+                    bool bool_rebin = true,
+                    int rebineta = 1,
+                    int rebinp = 1,
+                    int rebinih = 1,
+                    bool TakeAbsEta = false) {
 
     cout << "loading region " << regionName << endl;
 
-    r.eta_p                             = (TH2F*) f->Get(("eta_1oP_"+regionName).c_str())->Clone();
+    r.eta_p                = (TH2F*) f->Get(("eta_1oP_"+regionName).c_str())->Clone();
 
-    r.ih_eta                            = (TH2F*) f->Get(("ih_eta_"+regionName).c_str())->Clone();
-    r.ih_p                              = (TH2F*) f->Get(("ih_p_"+regionName).c_str())->Clone();
-    r.ih_p_cross1D                      = (TH2F*) r.ih_p->Clone(); r.ih_p_cross1D->Reset(); r.ih_p_cross1D->SetName(("cross1D_"+regionName).c_str());
-    r.ih_p_cross1D_fit                  = (TH2F*) r.ih_p->Clone(); r.ih_p_cross1D_fit->Reset(); r.ih_p_cross1D_fit->SetName(("cross1D_fit_"+regionName).c_str());
-    r.ih_p_cross1D_corr                 = (TH2F*) r.ih_p->Clone(); r.ih_p_cross1D_corr->Reset(); r.ih_p_cross1D_corr->SetName(("cross1D_corr_"+regionName).c_str());
+    r.ih_eta               = (TH2F*) f->Get(("ih_eta_"+regionName).c_str())->Clone();
+    r.ih_p                 = (TH2F*) f->Get(("ih_p_"+regionName).c_str())->Clone();
+    r.ih_p_cross1D         = (TH2F*) r.ih_p->Clone(); r.ih_p_cross1D->Reset(); r.ih_p_cross1D->SetName(("cross1D_"+regionName).c_str());
+    r.ih_p_cross1D_fit     = (TH2F*) r.ih_p->Clone(); r.ih_p_cross1D_fit->Reset(); r.ih_p_cross1D_fit->SetName(("cross1D_fit_"+regionName).c_str());
+    r.ih_p_cross1D_corr    = (TH2F*) r.ih_p->Clone(); r.ih_p_cross1D_corr->Reset(); r.ih_p_cross1D_corr->SetName(("cross1D_corr_"+regionName).c_str());
 
-    r.ias_p                             = (TH2F*) f->Get(("ias_p_"+regionName).c_str())->Clone();
-    r.ias_pt                            = (TH2F*) f->Get(("ias_pt_"+regionName).c_str())->Clone();
+    r.ias_p                = (TH2F*) f->Get(("ias_p_"+regionName).c_str())->Clone();
+    r.ias_pt               = (TH2F*) f->Get(("ias_pt_"+regionName).c_str())->Clone();
 
-    r.mass                              = (TH1F*) f->Get(("mass_"+regionName).c_str())->Clone();
-    r.mass_eta                          = (TH2F*) f->Get(("mass_eta_"+regionName).c_str())->Clone();
+    r.mass                 = (TH1F*) f->Get(("mass_"+regionName).c_str())->Clone();
+    r.mass_eta             = (TH2F*) f->Get(("mass_eta_"+regionName).c_str())->Clone();
 
-    r.pred_mass                         = (TH1F*) r.mass->Clone(); r.pred_mass->SetName(("pred_mass_"+regionName).c_str()); r.pred_mass->Reset();
-    r.pred_mass_eta                     = (TH2F*) r.mass_eta->Clone(); r.pred_mass_eta->SetName(("pred_mass_eta_"+regionName).c_str()); r.pred_mass_eta->Reset();
-    r.pred_mass_fitIh                   = (TH1F*) r.pred_mass->Clone(); r.pred_mass_fitIh->SetName(("pred_mass_fitIh_"+regionName).c_str());
-    r.pred_mass_fitP                    = (TH1F*) r.pred_mass->Clone(); r.pred_mass_fitP->SetName(("pred_mass_fitP_"+regionName).c_str());
-    r.pred_mass_fitIh_fitP              = (TH1F*) r.pred_mass->Clone(); r.pred_mass_fitIh_fitP->SetName(("pred_mass_fitIh_fitP_"+regionName).c_str());
-    r.pred_mass_noFit                   = (TH1F*) r.pred_mass->Clone(); r.pred_mass_noFit->SetName(("pred_mass_noFit_"+regionName).c_str());
+    r.pred_mass            = (TH1F*) r.mass->Clone(); r.pred_mass->SetName(("pred_mass_"+regionName).c_str()); r.pred_mass->Reset();
+    r.pred_mass_eta        = (TH2F*) r.mass_eta->Clone(); r.pred_mass_eta->SetName(("pred_mass_eta_"+regionName).c_str()); r.pred_mass_eta->Reset();
+    r.pred_mass_fitIh      = (TH1F*) r.pred_mass->Clone(); r.pred_mass_fitIh->SetName(("pred_mass_fitIh_"+regionName).c_str());
+    r.pred_mass_fitP       = (TH1F*) r.pred_mass->Clone(); r.pred_mass_fitP->SetName(("pred_mass_fitP_"+regionName).c_str());
+    r.pred_mass_fitIh_fitP = (TH1F*) r.pred_mass->Clone(); r.pred_mass_fitIh_fitP->SetName(("pred_mass_fitIh_fitP_"+regionName).c_str());
+    r.pred_mass_noFit      = (TH1F*) r.pred_mass->Clone(); r.pred_mass_noFit->SetName(("pred_mass_noFit_"+regionName).c_str());
 
 
-    std::vector<double> RebinEta_1_2p4_Down = {-2.4, -2.0, -1.6, -1., 1., 1.6, 2.0, 2.4};
-    std::vector<double> RebinEta_1_Down = {-2.4, -1., -0.6, -0.2, 0.2, 0.6, 1., 2.4};
+    std::vector<double> RebinEta_Down_Eta1_AND_Eta1_2p4 = {-2.4, -2.0, -1.5, -1.,
+                                                           -0.65, -0.30, 0, 0.30, 0.65, 1.,
+                                                           1.5, 2.0, 2.4};
+    std::vector<double> RebinEta_Down_Eta2p4 = {-2.4, -2.0, -1.6, -1.2,
+                                                -0.8, -0.4, 0, 0.4, 0.8,
+                                                1.2, 1.6, 2.0, 2.4};
+
+    std::vector<double> RebinEta_Nom_ALLeta = {-2.4, -2.15, -1.95, -1.75, -1.5, -1.25, -1., 
+                                              -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75,
+                                              1., 1.25, 1.5, 1.75, 1.95, 2.15, 2.4};
+    
+    std::vector<double> RebinEta_Up_ALLeta = {-2.4, -2.2, -2.0, -1.8, -1.6, -1.4, -1.2, -1., 
+                                              -0.8, -0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6, 0.8,
+                                              1., 1.2, 1.4, 1.6, 1.8, 2., 2.2, 2.4};
+
 
     if (bool_rebin) {
 
@@ -161,40 +181,52 @@ void loadHistograms(Region& r, TFile* f, const std::string& regionName, bool boo
         r.ias_p->Rebin2D(rebinp,rebinih);
         r.ias_pt->Rebin2D(rebinp,rebinih);
 
-        if (rebineta==8) {
+        if (rebineta==2 || rebineta==4 || rebineta==8) {
+
+            std::vector<double>* RebinEtaVecPtr = nullptr;
+
             if (regionName.find("Eta2p4") != std::string::npos) {
-                r.eta_p->Rebin2D(rebinp, rebineta);
-                r.ih_eta->Rebin2D(rebineta, rebinih);
-                r.mass_eta->Rebin2D(1, rebineta);
-                r.pred_mass_eta->Rebin2D(rebineta, 1);
+                if (rebineta == 8)      RebinEtaVecPtr = &RebinEta_Down_Eta2p4;
+                else if (rebineta == 4) RebinEtaVecPtr = &RebinEta_Nom_ALLeta;
+                else                    RebinEtaVecPtr = &RebinEta_Up_ALLeta;   // rebineta == 2
             }
             else {
-                std::vector<double>& RebinEtaVec = (regionName.find("Eta1_2p4") != std::string::npos)
-                                                ? RebinEta_1_2p4_Down
-                                                : RebinEta_1_Down;
-                int nEta = RebinEtaVec.size() - 1;
-                double* eEta  = RebinEtaVec.data();
-
-                // eta_p : X=p (uniforme), Y=eta (variable)
-                r.eta_p->RebinX(rebinp);
-                TH2F* tmp = RebinTH2Y_varBins(r.eta_p, nEta, eEta);
-                delete r.eta_p; r.eta_p = tmp;
-
-                // ih_eta : X=eta (variable), Y=ih (uniforme)
-                r.ih_eta->RebinY(rebinih);
-                tmp = RebinTH2X_varBins(r.ih_eta, nEta, eEta);
-                delete r.ih_eta; r.ih_eta = tmp;
-
-                // mass_eta : X=mass (uniforme), Y=eta (variable)
-                r.mass_eta->RebinX(1);
-                tmp = RebinTH2Y_varBins(r.mass_eta, nEta, eEta);
-                delete r.mass_eta; r.mass_eta = tmp;
-
-                // pred_mass_eta : X=eta (variable), Y=mass (uniforme)
-                r.pred_mass_eta->RebinY(1);
-                tmp = RebinTH2X_varBins(r.pred_mass_eta, nEta, eEta);
-                delete r.pred_mass_eta; r.pred_mass_eta = tmp;
+                if (rebineta == 8)      RebinEtaVecPtr = &RebinEta_Down_Eta1_AND_Eta1_2p4;
+                else if (rebineta == 4) RebinEtaVecPtr = &RebinEta_Nom_ALLeta;
+                else                    RebinEtaVecPtr = &RebinEta_Up_ALLeta;   // rebineta == 2
             }
+
+            std::vector<double>& RebinEtaVec = *RebinEtaVecPtr;
+            int nEta = RebinEtaVec.size() - 1;
+            double* eEta = RebinEtaVec.data();
+
+            //check
+            cout << "RebinEtaVec" << endl;
+            for (int i = 0; i < RebinEtaVec.size(); i++) {
+                cout << RebinEtaVec[i] << " ";
+            }
+            cout << endl;
+
+
+            // eta_p : X=p (uniform), Y=eta (moving)
+            r.eta_p->RebinX(rebinp);
+            TH2F* tmp = RebinTH2Y_varBins(r.eta_p, nEta, eEta);
+            delete r.eta_p; r.eta_p = tmp;
+
+            // ih_eta : X=eta (moving), Y=ih (uniform)
+            r.ih_eta->RebinY(rebinih);
+            tmp = RebinTH2X_varBins(r.ih_eta, nEta, eEta);
+            delete r.ih_eta; r.ih_eta = tmp;
+
+            // mass_eta : X=mass (uniform), Y=eta (moving)
+            r.mass_eta->RebinX(1);
+            tmp = RebinTH2Y_varBins(r.mass_eta, nEta, eEta);
+            delete r.mass_eta; r.mass_eta = tmp;
+
+            // pred_mass_eta : X=eta (moving), Y=mass (uniform)
+            r.pred_mass_eta->RebinY(1);
+            tmp = RebinTH2X_varBins(r.pred_mass_eta, nEta, eEta);
+            delete r.pred_mass_eta; r.pred_mass_eta = tmp;
         }
         else {
             r.eta_p->Rebin2D(rebinp,rebineta);
@@ -413,8 +445,7 @@ TH2F meanHistoPE_2D(std::vector<TH2F> vPE) {
 }
 
 void bckgEstimate(const std::string& filename,
-                  const std::string& st_sample, 
-                  const std::string& dirname,
+                  const std::string& st_sample,
                   const Region& B,
                   const Region& C,
                   const Region& BC,
@@ -432,6 +463,7 @@ void bckgEstimate(const std::string& filename,
                   const bool saveFits = false,
                   const int& fitIh = 1,
                   const int& fitP = 1,
+                  const int rebinp = 1,
                   bool blind = false) {
 
     std::vector<TH1F> vPE_;
@@ -475,11 +507,14 @@ void bckgEstimate(const std::string& filename,
 
 
     // Toys lambda function
-    auto workItem = [] (UInt_t workerID, const std::string& filename, const std::string& st_sample, const std::string& dirname, const Region& B, const Region& C, 
-                        const Region& BC, const Region& A, const Region& D, bool ifIhpSAME, const Region& B_ifIhpSAME, const std::string& st,
-                        const int& nPE = 200, const bool useFit = true, const bool useOldIhFit = false, const bool useOld1oPFit = false, const bool corrTemplateIh=false,
-                        const std::string& etaName = "", const bool& saveFits = false, const int& fitIh = 1, const int& fitP = 1, bool blind = false, 
-                        const double& par_p2 = 4.70839, const double& par_p3 = 1.05005)
+    auto workItem = [] (UInt_t workerID, const std::string& filename, const std::string& st_sample, 
+                        const Region& B, const Region& C, const Region& BC, 
+                        const Region& A, const Region& D, bool ifIhpSAME, 
+                        const Region& B_ifIhpSAME, const std::string& st, const int& nPE = 200, 
+                        const bool useFit = true, const bool useOldIhFit = false, const bool useOld1oPFit = false,
+                        const bool corrTemplateIh = false, const std::string& etaName = "", const bool& saveFits = false, 
+                        const int& fitIh = 1, const int& fitP = 1, const int rebinp = 1,
+                        bool blind = false, const double& par_p2 = 4.70839, const double& par_p3 = 1.05005)
                         -> std::tuple<TH1F, TH2F, float>
     {
 
@@ -523,8 +558,8 @@ void bckgEstimate(const std::string& filename,
         if (useOld1oPFit) {
             f_p.SetParLimits(0, 0, 9000);
             f_p.FixParameter(1, 1.0);
-            f_p.FixParameter(2, par_p2);
-            f_p.FixParameter(3, par_p3);
+            f_p.SetParameter(2, par_p2);
+            f_p.SetParameter(3, par_p3);
         }
         else {
             f_p.SetParLimits(0, 0, 1e-3);
@@ -565,15 +600,16 @@ void bckgEstimate(const std::string& filename,
         // Mass prediction in the BC region
         bc.eta_p = c_eta_p;
         bc.ih_eta = b_ih_eta;
-        if(st.find("ias") != std::string::npos) bc.fillPredMass(filename, st, st_sample, f_p, f_ihg, useFit, fitIh, fitP, -1, useOldIhFit, useOld1oPFit, etaName, saveFits);
-        else bc.fillPredMass(filename, st, st_sample, f_p, f_ihg, useFit, fitIh, fitP, -1, useOldIhFit, useOld1oPFit, etaName, saveFits);
-
+        bc.fillPredMass(filename, st, st_sample, f_p, f_ihg, useFit, fitIh, fitP, -1, 
+                        useOldIhFit, useOld1oPFit, etaName, saveFits, rebinp, workerID);
+        
         float normA = a_ih_eta->Integral(0, a_ih_eta->GetNbinsX()+1, 0, a_ih_eta->GetNbinsY()+1);
         float normB = b_ih_eta->Integral(0, b_ih_eta->GetNbinsX()+1, 0, b_ih_eta->GetNbinsY()+1);
         float normC = c_eta_p->Integral(0, c_eta_p->GetNbinsX()+1, 0, c_eta_p->GetNbinsY()+1);
 
         float normalisationABC = normB*normC/normA;
-        if (ifIhpSAME) normalisationABC = b_ifIhpSAME_ih_eta->Integral(0,b_ifIhpSAME_ih_eta->GetNbinsX()+1,0,b_ifIhpSAME_ih_eta->GetNbinsY()+1) * normC / normA;
+        if (ifIhpSAME) normalisationABC = b_ifIhpSAME_ih_eta->Integral(0, b_ifIhpSAME_ih_eta->GetNbinsX()+1,
+                                                                       0, b_ifIhpSAME_ih_eta->GetNbinsY()+1) * normC / normA;
         
         bc.pred_mass->Scale(normalisationABC/bc.pred_mass->Integral());
         bc.pred_mass_eta->Scale(normalisationABC/bc.pred_mass_eta->Integral());
@@ -593,8 +629,9 @@ void bckgEstimate(const std::string& filename,
     
     // Loop on the toys
     ROOT::TProcessExecutor workers(26);
-    auto workItemToRun = std::bind (workItem, _1, filename, st_sample, dirname, B, C, BC, A, D, ifIhpSAME, B_ifIhpSAME, st, nPE,
-                                    useFit, useOldIhFit, useOldIhFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, blind, par_p2, par_p3);
+    auto workItemToRun = std::bind (workItem, _1, filename, st_sample, B, C, BC, A, D, ifIhpSAME, B_ifIhpSAME, st, nPE,
+                                    useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, blind, par_p2, par_p3);
+    
     auto vPE = workers.Map(workItemToRun, ROOT::TSeqI(nPE));
 
 

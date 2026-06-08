@@ -7,7 +7,7 @@ import math
 import array
 import numpy as np
 import ctypes
-sys.path.append("/opt/sbg/cms/safe1/cms/gcoulon")
+sys.path.append("/safe/ui3_1/cms/gcoulon")
 
 from ROOT import THStack, TCanvas, TLegend, TLatex, TPad, TH1, TH2, TLine
 import CMS_lumi, tdrstyle
@@ -282,7 +282,7 @@ def main(argv):
     isData      = True
     labelRegion = region
     signal      = False
-    option      = "_etaAbs_chi2cut"
+    option      = "_etaAbs_rebinEta"#_chi2cut"
 
 
     ifile = ROOT.TFile(inputfile)
@@ -295,7 +295,7 @@ def main(argv):
     pred_noSyst = addSyst(pred,0.0)
 
 
-    ifileGl2000 = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/output/Gluino2000_massCut_0_pT70_V5p0_Fpix_Eta2p4_Scale.root")
+    ifileGl2000 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/output/Gluino2000_massCut_0_pT70_V5p0_Fpix_Eta2p4_Scale.root")
     m_Gl2000 = ifileGl2000.Get("mass_regionD_"+region+"_METContainingMu")
 
 
@@ -324,45 +324,44 @@ def main(argv):
             m_Gl2000 = m_Gl2000.Rebin(sizeRebinning,"Gl2000_new",rebinning)
 
 
-
-    ifileSyst = None
-    if (region=="8fp9" and not ("MET" in inputfile)):
-        print("faire les syst d'abord !")
-    if (("MET" in inputfile) and ("/Eta2p4/" in inputfile)):
-        ifileSyst = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta2p4/SystCombined/sysTotBinned_2024_" + region + ".root")
-    elif (("MET" in inputfile) and ("/Eta1_2p4/" in inputfile)):
-        ifileSyst = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta1_2p4/SystCombined/sysTotBinned_2024_" + region + ".root")
-    elif (("MET" in inputfile) and ("/Eta1/" in inputfile)):
-        ifileSyst = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta1/SystCombined/sysTotBinned_2024_" + region + ".root")
-
-    if ifileSyst is None:
-        raise RuntimeError(f"Aucun fichier syst trouvé pour region='{region}', inputfile='{inputfile}'")
-
-    
-    histoOfSyst = ifileSyst.Get("systTotalBinned")
-
     pred_noCorrBias = pred.Clone()
     pred_noBlind = pred.Clone("_prednoBlind")
     obs_noBlind = obs.Clone("_obsnoBlind")
 
 
+
+    ifileSyst = None
+    if (region=="8fp9" and not ("MET" in inputfile)):
+        print("faire les syst d'abord !")
     if (not nominalOnly):
+        if (("MET" in inputfile) and ("/Eta2p4/" in inputfile)):
+            ifileSyst = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta2p4/SystCombined/sysTotBinned_2024_" + region + ".root")
+        elif (("MET" in inputfile) and ("/Eta1_2p4/" in inputfile)):
+            ifileSyst = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta1_2p4/SystCombined/sysTotBinned_2024_" + region + ".root")
+        elif (("MET" in inputfile) and ("/Eta1/" in inputfile)):
+            ifileSyst = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta1/SystCombined/sysTotBinned_2024_" + region + ".root")
+
+        if (ifileSyst is None):
+            raise RuntimeError(f"Aucun fichier syst trouvé pour region='{region}', inputfile='{inputfile}'")
+        print(" syst. file: ", ifileSyst.GetName())
+
+        histoOfSyst = ifileSyst.Get("systTotalBinned")
+
         (pred, predD, predU) = addHSyst(pred, histoOfSyst, pred_noCorrBias)
         (pred_noBlind, pred_noBlindU, pred_noBlindD) = addHSyst(pred_noBlind, histoOfSyst, pred_noCorrBias)
-        print(" syst. file: ", ifileSyst.GetName())
     else:
         print(" /!\ only nominal")
 
         ifileSystnom = None
         if (("MET" in inputfile) and ("/Eta2p4/" in inputfile)):
-            ifileSystnom = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta2p4/SystCombined/sysToTBinned_2024_" + region + ".root")
+            ifileSystnom = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta2p4/SystCombined/sysToTBinned_2024_" + region + ".root")
         elif (("MET" in inputfile) and ("/Eta1_2p4/" in inputfile)):
-            ifileSystnom = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta1_2p4/SystCombined/sysToTBinned_2024_" + region + ".root")
+            ifileSystnom = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta1_2p4/SystCombined/sysToTBinned_2024_" + region + ".root")
         elif (("MET" in inputfile) and ("/Eta1/" in inputfile)):
-            ifileSystnom = ROOT.TFile("/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta1/SystCombined/sysToTBinned_2024_" + region + ".root")
+            ifileSystnom = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta1/SystCombined/sysToTBinned_2024_" + region + ".root")
         print(" syst. file: ", ifileSystnom.GetName())
 
-        histoOfSystnom = ifileSystnom.Get("Stat")
+        histoOfSystnom = ifileSystnom.Get("Stat_binned")
         (pred, predD, predU) = addHSyst(pred, histoOfSystnom, pred_noCorrBias)
         (pred_noBlind, pred_noBlindU, pred_noBlindD) = addHSyst(pred_noBlind, histoOfSystnom, pred_noCorrBias)
 

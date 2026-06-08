@@ -1,24 +1,23 @@
 #!/usr/bin/python
 
-import sys, getopt, os
+import sys, os
 sys.argv.append( '-b-' )
 import ROOT
 import math
 import array
-import numpy as np
 import ctypes
 
 from ROOT import TFile, THStack, TCanvas, TLegend, TLatex, TPad, TH1, TH2, TLine, TGraph, TGraphErrors
-import CMS_lumi, tdrstyle
+import tdrstyle
 
 ROOT.gROOT.SetBatch(True)
 
 tdrstyle.setTDRStyle()
 
-def ratioHisto(h2,h1):
-    h3=h1.Clone()
-    h3.Divide(h2)
-    return h3
+def ratioHisto(h2, h1):
+    hc = h1.Clone()
+    hc.Divide(h2)
+    return hc
 
 def ratioInt(h1, h2):
     h3 = h2.Clone()
@@ -26,8 +25,8 @@ def ratioInt(h1, h2):
     for i in range(0, h1.GetNbinsX()+1):
         e1 = ctypes.c_double(0.0)
         e2 = ctypes.c_double(0.0)
-        a = h1.IntegralAndError(i, h1.GetNbinsX(), e1, "")
-        b = h2.IntegralAndError(i, h1.GetNbinsX(), e2, "")
+        a = h1.IntegralAndError(i, h1.GetNbinsX()+1, e1, "")
+        b = h2.IntegralAndError(i, h1.GetNbinsX()+1, e2, "")
         if b != 0 and a != 0:
             c = math.sqrt((e1.value*e1.value)/(a*a) + (e2.value*e2.value)/(b*b)) * a/b
             h3.SetBinContent(i, a/b)
@@ -40,6 +39,18 @@ def lowEdge(h1):
     res=ROOT.TGraph(h1.GetNbinsX()-1)
     for i in range (1,h1.GetNbinsX()+1):
         res.SetPoint(i-1,h1.GetBinLowEdge(i),h1.GetBinContent(i))
+    return res
+
+def overflowInLastBin(h):
+    res = h.Clone()
+    res.SetBinContent(h.GetNbinsX(), h.GetBinContent(h.GetNbinsX()) + h.GetBinContent(h.GetNbinsX() + 1))
+    res.SetBinContent(h.GetNbinsX()+1, 0)
+    return res
+
+def underflowInFirstBin(h):
+    res = h.Clone()
+    res.SetBinContent(1, h.GetBinContent(0) + h.GetBinContent(1))
+    res.SetBinContent(0, 0)
     return res
 
 def statErr(h1, name):
@@ -64,55 +75,68 @@ def statErrRInt(h1, name):
             statErr.SetBinContent(i, 0)
     return 100 * statErr
 
-def systMass(nominal,down,up,name,typec,binned,mini=0):
+def systMass(nominal, down, up, name, typec, binned, mini=0, debug=False):
     if (binned==0):
-        ra1=ratioInt(nominal,up)
-        ra2=ratioInt(nominal,down)
+        ra1 = ratioInt(nominal, up)
+        ra2 = ratioInt(nominal, down)
     elif (binned==1):
-        ra1=ratioHisto(nominal,up)
-        ra2=ratioHisto(nominal,down)
-    res=ra1.Clone()
+        ra1 = ratioHisto(nominal, up)
+        ra2 = ratioHisto(nominal, down)
+    res = ra1.Clone()
     res.SetName(name)
     for i in range (0,res.GetNbinsX()+1):
-        r1=ra1.GetBinContent(i)
-        r2=ra2.GetBinContent(i)
+        r1 = ra1.GetBinContent(i)
+        r2 = ra2.GetBinContent(i)
 
-        s1=abs(1-r1)
-        s2=abs(1-r2)
-        s1=abs(r1-1)
-        s2=abs(r2-1)
-
+        s1 = abs(1-r1)
+        s2 = abs(1-r2)
+        
         if (typec==0):
-            m=max(s1,s2)
+            if (debug):
+                if (s1 > s2): print(f"bin {i}: up")
+                else: print(f"bin {i}: down")
+            
+            m = max(s1, s2)
             if (mini==1):
-                m=min(s1,s2)
+                m = min(s1, s2)
             elif (mini==2):
-                m/=2
+                m /= 2
         elif (typec==1):
-            m=(s1+s2)/2.
-        res.SetBinContent(i,100*m)
+            m = (s1 + s2)/2.
+        res.SetBinContent(i, 100*m)
     return res
 
+def systMassAll(nominal, down, up, st, mini=0, debug=False):
+    '''
+    Return the maximum between the up and down variation relative to the nominal, in percentage.
+    If mini=1, return the minimum instead of the maximum.
+    '''
+    if (debug): print ("res")
+    res = systMass(nominal, down, up, st, 0, 0, mini, debug)
+    if (debug): print ("res_mean")
+    res_mean = systMass(nominal, down, up, st, 1, 0, mini, debug)
+    if (debug): print ("res_binned")
+    res_binned = systMass(nominal, down, up, st, 0, 1, mini, debug)
+    #res_binned = systMass(nominal, down, down, st, 0, 1, mini, debug)
+    if (debug): print ("res_binned_mean")
+    res_binned_mean = systMass(nominal, down, up, st, 1, 1, mini, debug)
+    return res, res_mean, res_binned, res_binned_mean
+
 def systTotal(list_h):
-    res=list_h[0].Clone()
+    res = list_h[0].Clone()
     for i in range (0,res.GetNbinsX()+1):
-        systotal=0
+        systotal = 0
         for h in list_h:
-            systotal+=h.GetBinContent(i)*h.GetBinContent(i)
+            systotal += h.GetBinContent(i)*h.GetBinContent(i)
         res.SetBinContent(i,math.sqrt(systotal))
     return res
 
-def RebinHisto(h, sizeRebinning,  rebinning , st):
-    h=h.Rebin(sizeRebinning, st, rebinning)
+def allSet(h, sizeRebinning,  rebinning , st):
+    h = h.Rebin(sizeRebinning, st, rebinning)
+    h = overflowInLastBin(h)
+    h = underflowInFirstBin(h)
     h.Scale(1./h.Integral())
     return h
-
-def systMassAll(nominal,down,up,st,mini=0):
-    res = systMass(nominal,down,up,st,0,0,mini)
-    res_mean = systMass(nominal,down,up,st,1,0,mini)
-    res_binned = systMass(nominal,down,up,st,0,1,mini)
-    res_binned_mean = systMass(nominal,down,up,st,1,1,mini)
-    return res, res_mean, res_binned, res_binned_mean
 
 def setColorAndMarker(h1,color,markerstyle):
     h1.SetLineColor(color)
@@ -137,18 +161,17 @@ def plotSummary(syst_stat,
                 syst_corrIh,
                 sysTot,
                 xtitle,
-                outTitle,
-                labelRegion,
-                label_lowEdge=0):
-    syst_stat=lowEdge(syst_stat)
-    syst_eta=lowEdge(syst_eta)
-    syst_ih=lowEdge(syst_ih)
-    syst_p=lowEdge(syst_p)
-    syst_fitP=lowEdge(syst_fitP)
-    syst_nofit=lowEdge(syst_nofit)
-    syst_corrIh=lowEdge(syst_corrIh)
-    syst_fitDeDx=lowEdge(syst_fitDeDx)
-    sysTot=lowEdge(sysTot)
+                outTitle):
+    
+    syst_stat = lowEdge(syst_stat)
+    syst_eta = lowEdge(syst_eta)
+    syst_ih = lowEdge(syst_ih)
+    syst_p = lowEdge(syst_p)
+    syst_fitP = lowEdge(syst_fitP)
+    syst_nofit = lowEdge(syst_nofit)
+    syst_corrIh = lowEdge(syst_corrIh)
+    syst_fitDeDx = lowEdge(syst_fitDeDx)
+    sysTot = lowEdge(sysTot)
 
     c2=TCanvas()
 
@@ -182,17 +205,17 @@ def plotSummary(syst_stat,
     syst_stat.SetMinimum(1)
     syst_stat.SetMaximum(2000)
 
-    syst_stat=setColorAndMarker(syst_stat,1,20)
-    syst_eta=setColorAndMarker(syst_eta,30,21)
-    syst_ih=setColorAndMarker(syst_ih,38,22)
-    syst_p=setColorAndMarker(syst_p,46,23)
-    syst_fitP=setColorAndMarker(syst_fitP,47,47)
-    syst_nofit=setColorAndMarker(syst_nofit,41,48)
-    syst_corrIh=setColorAndMarker(syst_corrIh,13,49)
-    syst_fitDeDx=setColorAndMarker(syst_fitDeDx,39,29)
-    sysTot=setColorAndMarker(sysTot,28,34)
+    syst_stat = setColorAndMarker(syst_stat,1,20)
+    syst_eta = setColorAndMarker(syst_eta,30,21)
+    syst_ih = setColorAndMarker(syst_ih,38,22)
+    syst_p = setColorAndMarker(syst_p,46,23)
+    syst_fitP = setColorAndMarker(syst_fitP,47,47)
+    syst_nofit = setColorAndMarker(syst_nofit,41,48)
+    syst_corrIh = setColorAndMarker(syst_corrIh,13,49)
+    syst_fitDeDx = setColorAndMarker(syst_fitDeDx,39,29)
+    sysTot = setColorAndMarker(sysTot,28,34)
 
-    leg2=TLegend(0.27,0.7,0.5,0.93)
+    leg2 = TLegend(0.27,0.7,0.5,0.93)
     leg2.AddEntry(sysTot,"Total","PE1")
     leg2.AddEntry(syst_stat,"Stat.","PE1")
     leg2.AddEntry(syst_eta,"#eta binning","PE1")
@@ -200,7 +223,7 @@ def plotSummary(syst_stat,
     leg2.AddEntry(syst_p,"p binning","PE1")
     leg2.AddEntry(syst_fitP,"p fit","PE1")
     leg2.AddEntry(syst_fitDeDx,"I_{h} fit","PE1")
-    leg2.AddEntry(syst_nofit,"No fit","PE1")
+    #leg2.AddEntry(syst_nofit,"No fit","PE1")
     leg2.AddEntry(syst_corrIh,"corr template I_{h}","PE1")
    
     syst_stat.Draw("AP")
@@ -209,7 +232,7 @@ def plotSummary(syst_stat,
     syst_ih.Draw("P")
     syst_p.Draw("P")
     syst_fitP.Draw("P")
-    syst_nofit.Draw("P")
+    #syst_nofit.Draw("P")
     syst_corrIh.Draw("P")
     syst_fitDeDx.Draw("P")
     sysTot.Draw("P")
@@ -228,52 +251,74 @@ def plotSummary(syst_stat,
 
 
 # Setup
+onlyNominal = False    
 version     = "V12p24"
 etaname     = "Eta2p4"
 year        = "2024"
 sample      = "JetMET"
-region      = "8fp9"
-option      = "_etaAbs_chi2cut"
-directory   = "/opt/sbg/cms/safe1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__8fp9" + option + "/" + etaname + "/"
+region      = "9fp10"
+option      = "_etaAbs_etaRebinPerso_1oPRebinBig_Oldfit" #"_etaAbs"
+option2     = "_OldFit"
+
+directory   = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_" + version + "__" + region + option + "/" + etaname + "/"
 oDir        = directory + "SystCombined/"
 ofile       = TFile(oDir + "sysToTBinned_" + year + "_" + region + ".root", "RECREATE")
 
 plotType    = "mass_predBC_"
 
+rebinning = array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
+sizeRebinning = len(rebinning) - 1
 
 
-inputNominal = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_EtaReweighting_" + etaname + "_NewFit.root" 
+# Only stat for the nominal
+inputNominal = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_EtaReweighting_" + etaname + option2 + ".root" 
 ifileNominal = TFile(inputNominal)
 
-inputEtaD = directory + sample + year + "_" + version + "_rebinEta2_rebinIh4_rebinP2_EtaReweighting_" + etaname + "_NewFit.root" 
-inputEtaU = directory + sample + year + "_" + version + "_rebinEta8_rebinIh4_rebinP2_EtaReweighting_" + etaname + "_NewFit.root" 
+predNominal_def = ifileNominal.Get(plotType + region)
+predNominal_def = allSet(predNominal_def, sizeRebinning, rebinning, "nominal_def")
+
+syst_stat = statErrRInt(predNominal_def, "Stat")
+syst_stat_binned = statErr(predNominal_def, "Stat_binned")
+
+if (onlyNominal):
+    print("Only nominal, no systematic variation, exiting.")
+    ofile.cd()
+    syst_stat.Write()
+    syst_stat_binned.Write()
+    ofile.Close()
+    sys.exit(0)
+
+
+# Up/Down for the others
+inputEtaD = directory + sample + year + "_" + version + "_rebinEta8_rebinIh4_rebinP4_EtaReweighting_" + etaname + option2 + ".root" 
+inputEtaU = directory + sample + year + "_" + version + "_rebinEta2_rebinIh4_rebinP4_EtaReweighting_" + etaname + option2 + ".root" 
 ifileEtaD = TFile(inputEtaD)
 ifileEtaU = TFile(inputEtaU)
 
-inputIhD = directory + sample + year + "_" + version + "_rebinEta4_rebinIh2_rebinP2_EtaReweighting_" + etaname + "_NewFit.root" 
-inputIhU = directory + sample + year + "_" + version + "_rebinEta4_rebinIh8_rebinP2_EtaReweighting_" + etaname + "_NewFit.root" 
+inputIhD = directory + sample + year + "_" + version + "_rebinEta4_rebinIh8_rebinP4_EtaReweighting_" + etaname + option2 + ".root" 
+inputIhU = directory + sample + year + "_" + version + "_rebinEta4_rebinIh2_rebinP4_EtaReweighting_" + etaname + option2 + ".root" 
 ifileIhD = TFile(inputIhD)
 ifileIhU = TFile(inputIhU)
 
-inputPD = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP1_EtaReweighting_" + etaname + "_NewFit.root" 
-inputPU = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP4_EtaReweighting_" + etaname + "_NewFit.root" 
+inputPD = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP8_EtaReweighting_" + etaname + option2 + ".root" 
+inputPU = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_EtaReweighting_" + etaname + option2 + ".root" 
 ifilePD = TFile(inputPD)
 ifilePU = TFile(inputPU)
 
-inputFitPUp     = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitPUp_EtaReweighting_" + etaname + "_NewFit.root" 
-inputFitPDown   = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitPDown_EtaReweighting_" + etaname + "_NewFit.root" 
+inputFitPUp     = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP4_fitPUp_EtaReweighting_" + etaname + option2 + ".root" 
+inputFitPDown   = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP4_fitPDown_EtaReweighting_" + etaname + option2 + ".root" 
 ifileFitPUp     = TFile(inputFitPUp)
 ifileFitPDown   = TFile(inputFitPDown)
 
-inputFitDeDxUp      = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitIhUp_EtaReweighting_" + etaname + "_NewFit.root" 
-inputFitDeDxDown    = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitIhDown_EtaReweighting_" + etaname + "_NewFit.root" 
+inputFitDeDxUp      = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP4_fitIhUp_EtaReweighting_" + etaname + option2 + ".root" 
+inputFitDeDxDown    = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP4_fitIhDown_EtaReweighting_" + etaname + option2 + ".root" 
 ifileFitDeDxUp      = TFile(inputFitDeDxUp)
 ifileFitDeDxDown    = TFile(inputFitDeDxDown)
 
-inputNoFit = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_EtaReweighting_" + etaname + "_NoFit.root"
+inputNoFit = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP4_EtaReweighting_" + etaname + "_NoFit" + ".root" 
 ifileNoFit = TFile(inputNoFit)
 
-inputcorrTemplateIh = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_corrTemplateIh_EtaReweighting_" + etaname + "_NewFit.root"
+inputcorrTemplateIh = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP4_corrTemplateIh_EtaReweighting_" + etaname + option2 + ".root"
 ifilecorrTemplateIh = TFile(inputcorrTemplateIh)
 
 
@@ -281,8 +326,6 @@ print(inputNominal)
 
 
 # Compute the systematics
-predNominal_def = ifileNominal.Get(plotType + region)
-
 predEtaD        = ifileEtaD.Get(plotType + region)
 predEtaU        = ifileEtaU.Get(plotType + region)
 
@@ -304,53 +347,44 @@ predcorrIh = ifilecorrTemplateIh.Get(plotType + region)
 
 
 
-rebinning = array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
-sizeRebinning = len(rebinning)-1
+predEtaNominal = allSet(predNominal_def, sizeRebinning, rebinning, "eta_nominal")
+predEtaD       = allSet(predEtaD, sizeRebinning, rebinning, "eta_down")
+predEtaU       = allSet(predEtaU, sizeRebinning, rebinning, "eta_up")
 
-predNominal_def = RebinHisto(predNominal_def, sizeRebinning, rebinning, "nominal_def")
+predIhNominal  = allSet(predNominal_def, sizeRebinning, rebinning, "ih_nominal")
+predIhD        = allSet(predIhD, sizeRebinning, rebinning, "ih_down")
+predIhU        = allSet(predIhU, sizeRebinning, rebinning, "ih_up")
 
-syst_stat = statErrRInt(predNominal_def, "Stat")
-syst_stat_binned = statErr(predNominal_def, "Stat")
+predPNominal   = allSet(predNominal_def, sizeRebinning, rebinning, "p_nominal")
+predPD         = allSet(predPD, sizeRebinning, rebinning, "p_down")
+predPU         = allSet(predPU, sizeRebinning, rebinning, "p_up")
 
+predFitPNominal = allSet(predNominal_def, sizeRebinning, rebinning, "fitP_nominal")
+predFitPDown    = allSet(predFitPDown, sizeRebinning, rebinning, "fitP_down")
+predFitPUp      = allSet(predFitPUp, sizeRebinning, rebinning, "fitP_up")
 
-predEtaNominal = RebinHisto(predNominal_def, sizeRebinning, rebinning, "eta_nominal")
-predEtaD       = RebinHisto(predEtaD, sizeRebinning, rebinning, "eta_down")
-predEtaU       = RebinHisto(predEtaU, sizeRebinning, rebinning, "eta_up")
+predFitDeDxNominal  = allSet(predNominal_def, sizeRebinning, rebinning, "fitDeDx_nominal")
+predFitDeDxDown     = allSet(predFitDeDxDown, sizeRebinning, rebinning, "fitDeDx_down")
+predFitDeDxUp       = allSet(predFitDeDxUp, sizeRebinning, rebinning, "fitDeDx_up")
 
-predIhNominal  = RebinHisto(predNominal_def, sizeRebinning, rebinning, "ih_nominal")
-predIhD        = RebinHisto(predIhD, sizeRebinning, rebinning, "ih_down")
-predIhU        = RebinHisto(predIhU, sizeRebinning, rebinning, "ih_up")
+predNoFitNominal  = allSet(predNominal_def, sizeRebinning, rebinning, "Nofit_nominal")
+predNoFitDown     = allSet(predNoFit, sizeRebinning, rebinning, "Nofit_down")
+predNoFitUp       = allSet(predNoFit, sizeRebinning, rebinning, "Nofit_up")
 
-predPNominal   = RebinHisto(predNominal_def, sizeRebinning, rebinning, "p_nominal")
-predPD         = RebinHisto(predPD, sizeRebinning, rebinning, "p_down")
-predPU         = RebinHisto(predPU, sizeRebinning, rebinning, "p_up")
-
-predFitPNominal = RebinHisto(predNominal_def, sizeRebinning, rebinning, "fitP_nominal")
-predFitPDown    = RebinHisto(predFitPDown, sizeRebinning, rebinning, "fitP_down")
-predFitPUp      = RebinHisto(predFitPUp, sizeRebinning, rebinning, "fitP_up")
-
-predFitDeDxNominal  = RebinHisto(predNominal_def, sizeRebinning, rebinning, "fitDeDx_nominal")
-predFitDeDxDown     = RebinHisto(predFitDeDxDown, sizeRebinning, rebinning, "fitDeDx_down")
-predFitDeDxUp       = RebinHisto(predFitDeDxUp, sizeRebinning, rebinning, "fitDeDx_up")
-
-predNoFitNominal  = RebinHisto(predNominal_def, sizeRebinning, rebinning, "Nofit_nominal")
-predNoFitDown     = RebinHisto(predNoFit, sizeRebinning, rebinning, "Nofit_down")
-predNoFitUp       = RebinHisto(predNoFit, sizeRebinning, rebinning, "Nofit_up")
-
-predcorrIhNominal  = RebinHisto(predNominal_def, sizeRebinning, rebinning, "corrIh_nominal")
-predcorrIhDown     = RebinHisto(predcorrIh, sizeRebinning, rebinning, "corrIh_down")
-predcorrIhUp       = RebinHisto(predcorrIh, sizeRebinning, rebinning, "corrIh_up")
+predcorrIhNominal  = allSet(predNominal_def, sizeRebinning, rebinning, "corrIh_nominal")
+predcorrIhDown     = allSet(predcorrIh, sizeRebinning, rebinning, "corrIh_down")
+predcorrIhUp       = allSet(predcorrIh, sizeRebinning, rebinning, "corrIh_up")
 
 
 
-(syst_eta, syst_eta_mean, syst_eta_binned, syst_eta_binned_mean) = systMassAll(predEtaNominal,predEtaD,predEtaU,"Eta")
-(syst_ih, syst_ih_mean, syst_ih_binned, syst_ih_binned_mean) = systMassAll(predIhNominal,predIhD,predIhU,"Ih")
-(syst_p, syst_p_mean, syst_p_binned, syst_p_binned_mean) = systMassAll(predPNominal,predPD,predPU,"P")
+(syst_eta, syst_eta_mean, syst_eta_binned, syst_eta_binned_mean) = systMassAll(predEtaNominal, predEtaD, predEtaU, "Eta")
+(syst_ih, syst_ih_mean, syst_ih_binned, syst_ih_binned_mean) = systMassAll(predIhNominal, predIhD, predIhU, "Ih")
+(syst_p, syst_p_mean, syst_p_binned, syst_p_binned_mean) = systMassAll(predPNominal, predPD, predPU, "P")
 
-(syst_fitP, syst_fitP_mean, syst_fitP_binned, syst_fitP_binned_mean) = systMassAll(predFitPNominal,predFitPDown,predFitPUp,"Fit_p")
-(syst_fitDeDx, syst_fitDeDx_mean, syst_fitDeDx_binned, syst_fitDeDx_binned_mean) = systMassAll(predFitDeDxNominal,predFitDeDxDown,predFitDeDxUp,"Fit_dedx_systMassAl")
-(syst_nofit, syst_nofit_mean, syst_nofit_binned, syst_nofit_binned_mean) = systMassAll(predNoFitNominal,predNoFitDown,predNoFitUp,"NoFit_systMassAl")
-(syst_corrIh, syst_corrIh_mean, syst_corrIh_binned, syst_corrIh_binned_mean) = systMassAll(predcorrIhNominal,predcorrIhDown,predcorrIhUp,"corrIh_systMassAl")
+(syst_fitP, syst_fitP_mean, syst_fitP_binned, syst_fitP_binned_mean) = systMassAll(predFitPNominal, predFitPDown, predFitPUp, "Fit_p")
+(syst_fitDeDx, syst_fitDeDx_mean, syst_fitDeDx_binned, syst_fitDeDx_binned_mean) = systMassAll(predFitDeDxNominal, predFitDeDxDown, predFitDeDxUp, "Fit_dedx_systMassAl")
+(syst_nofit, syst_nofit_mean, syst_nofit_binned, syst_nofit_binned_mean) = systMassAll(predNoFitNominal, predNoFitDown, predNoFitUp, "NoFit_systMassAl")
+(syst_corrIh, syst_corrIh_mean, syst_corrIh_binned, syst_corrIh_binned_mean) = systMassAll(predcorrIhNominal, predcorrIhDown, predcorrIhUp, "corrIh_systMassAl")
 
 ofile.cd()
 syst_stat.Write()
@@ -363,8 +397,8 @@ syst_fitDeDx.Write()
 syst_nofit.Write()
 syst_corrIh.Write()
 
-
-listOfSyst = [syst_stat, syst_eta, syst_ih, syst_p, syst_fitP, syst_fitDeDx, syst_nofit, syst_corrIh]
+#syst_nofit not taken !!
+listOfSyst = [syst_stat, syst_eta, syst_ih, syst_p, syst_fitP, syst_fitDeDx, syst_corrIh] #syst_nofit
 sysTot = systTotal(listOfSyst)
 sysTot.SetName("systTotal")
 sysTot.Write()
@@ -376,7 +410,7 @@ listOfSyst_binned = [syst_stat_binned,
                      syst_p_binned, 
                      syst_fitP_binned, 
                      syst_fitDeDx_binned, 
-                     syst_nofit_binned, 
+                     #syst_nofit_binned, 
                      syst_corrIh_binned]
 sysTot_binned = systTotal(listOfSyst_binned)
 sysTot_binned.SetName("systTotalBinned")
@@ -400,5 +434,7 @@ plotSummary(syst_stat_binned,
             syst_corrIh_binned,
             sysTot_binned,
             "Mass bin",
-            "binned_syst",
-            region)
+            "binned_syst")
+
+
+print("Everything is done, closing the output file.")

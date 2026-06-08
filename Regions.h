@@ -30,8 +30,7 @@ void scale(TH1F* h) {
 }
 
 
-void corrIh(TH2F* ih_eta)
-{
+void corrIh(TH2F* ih_eta) {
     TF1 f_correlation_Ih_Fpix("f_correlation_Ih_Fpix","pol1",2,10);
     f_correlation_Ih_Fpix.SetParameter(0, 1.15515);
     f_correlation_Ih_Fpix.SetParameter(1, -0.0464627);
@@ -83,7 +82,9 @@ class Region{
                           bool useOldIhFit = false,
                           bool useOld1oPFit = false,
                           const std::string& etaName = "",
-                          bool saveFits = false);
+                          bool saveFits = false,
+                          const int rebinp = 1,
+                          const UInt_t workerID = 0);
         void write();
 
         float K_;
@@ -208,11 +209,13 @@ void Region::fillPredMass(const std::string& filename,
                           bool useOldIhFit = false,
                           bool useOld1oPFit = false,
                           const std::string& etaName = "",
-                          bool saveFits = false) {
+                          bool saveFits = false,
+                          const int rebinp = 1,
+                          const UInt_t workerID = 0) {
 
     // Debug Fit
     TFile* OutputHisto = nullptr;
-    std::string filenameOutputFit = "DebugFit/Fits_" + filename + "_" + st + ((useOldIhFit || useOld1oPFit) ? "_OldFit" : "_NewFit") + etaName + ".root";
+    std::string filenameOutputFit = "DebugFit/Fits_" + filename + "_" + st + ((useOldIhFit || useOld1oPFit) ? "_OldFit" : "_NewFit") + etaName + "_" + std::to_string(workerID) +".root";
     if (saveFits) {
         OutputHisto = new TFile(filenameOutputFit.c_str(), "RECREATE");
         OutputHisto->cd();
@@ -257,18 +260,15 @@ void Region::fillPredMass(const std::string& filename,
         int lastBinContent = ih->GetNbinsX();
         while(ih->GetBinContent(lastBinContent)==0) lastBinContent--;
         if(start_fit > ih->GetBinCenter(lastBinContent)) start_fit = max_ih;
-        if(st.find("ias") != std::string::npos) start_fit = 3.5;      // if ias region: gaussian fit starting at 3.5
 
         if (useFitIh) {
             ptr1 = ih->Fit(&f_ih, "QRSL", "", start_fit, endIhFit);
             if (ptr1 && ptr1->Status() != 0) { // Bad fit
                 if (saveFits) { OutputHisto->cd(); ih->Write(); }
                 useFitIh = false;
-                //cout << "bad Ih:     " << f_ih.GetChisquare()/f_ih.GetNDF() << endl;
             }
             else {                             // Good fit
                 if (saveFits) { OutputHisto->cd(); ih->Write(); }
-                //cout << "Ih:     " << f_ih.GetChisquare()/f_ih.GetNDF() << endl;
             }
         }
         else {
@@ -279,8 +279,11 @@ void Region::fillPredMass(const std::string& filename,
         float intIh = ih->Integral(ih->FindBin(3), ih->FindBin(endIhFit));
 
         float SFih = (intFih > 0)? intIh/intFih : -1;
-        if(SFih < 0) useFitIh = false;
-        if(intFih <= 0) std::cout<<"ERROR > INTEGRAL FIT IH IS <= 0.   ITG = " << intFih << " FOR ETA BIN #" << i << std::endl;
+        if(SFih < 0 && useFitIh) {
+            std::cout<<"ERROR > INTEGRAL FIT IH IS <= 0.   ITG = " << intFih << " FOR ETA BIN #" << i << std::endl;
+            useFitIh = false;
+        }
+        
 
         TF1* f_ih3 = f_ih2;
         bool hasCov = false;
@@ -298,69 +301,71 @@ void Region::fillPredMass(const std::string& filename,
 
 
         // 1/p fit
-        float SFp = 10;
-        TF1* f_p3 = &f_p;;
-        int incrFit = 0;
-        
+        float SFp = 0;
+        TF1* f_p3 = &f_p;
         TFitResultPtr ptr2 = 0;
         int statusFit = 1;
 
-        while (statusFit != 0 && incrFit < 5)
-        {
-            incrFit++;
+        start1oPFit = 0;
+        // Taking the fit from the Down variation, as it is the one with the thicker bins, thus less statistical fluctuations for the fit to converge
+        TH1F *p_forfit = (TH1F*) p->Clone(Form("forfit_p_eta%d", i));
+        p_forfit->SetDirectory(nullptr);
+        if (rebinp == 2) p_forfit->Rebin(4);    // Up variation: already upstream Rebin(2)
+        if (rebinp == 4) p_forfit->Rebin(2);    // Nominal     : already upstream Rebin(4)
 
-            // start1oPFit = first bin with content + 4
-            for (int b = 1; b <= p->GetNbinsX(); b++) {
-                if (p->GetBinContent(b) > 0) {
-                    start1oPFit = p->GetBinCenter(b);
-                    break;
-                }
+        for (int b = 1; b <= p_forfit->GetNbinsX(); b++) {
+            if (p_forfit->GetBinContent(b) > 0) {
+                start1oPFit = p_forfit->GetBinCenter(b);
+                break;
             }
-            //if (etaName != "_Eta1") start1oPFit = 0;
-            //end1oPFit = (etaName == "_Eta1")? 0.5 * p->GetBinCenter(p->GetMaximumBin()) : 0.4 * p->GetBinCenter(p->GetMaximumBin());
-            end1oPFit = 0.6 * p->GetBinCenter(p->GetMaximumBin());
-            //if (end1oPFit > 25) end1oPFit = 25;
-            if (useOld1oPFit) end1oPFit = 30; // for the old fit
+        }
 
-            if (useFitP) ptr2 = p->Fit(&f_p, "QRS", "", start1oPFit, end1oPFit);
+        if (useFitP) {
+            const float endFracs[5] = {0.9f, 0.8f, 0.7f, 0.6f, 0.5f};
+            float peak = p_forfit->GetBinCenter(p_forfit->GetMaximumBin());
 
-            TF1* f_p2 = &f_p;
+            for (unsigned int incrFit = 0; incrFit < 5; incrFit++) {
 
-            float intFp = 1;
-            if (useFitP) {
+                if (useOld1oPFit)  end1oPFit = endFracs[incrFit] * peak;
+                else end1oPFit = 0.6 * peak;
+
+                if (end1oPFit <= start1oPFit) { statusFit = 1; continue; }
+
+                ptr2 = p_forfit->Fit(&f_p, "QRS", "", start1oPFit, end1oPFit);
+                statusFit = ptr2.Get() ? ptr2->Status() : 1;
+
+                if (statusFit == 0) break;  // good fit, we keep it
+            }
+
+            if (statusFit == 0) {
+                TF1* f_p2 = &f_p;
                 ROOT::Math::IntegratorOneDim intOneDim_p(*f_p2, ROOT::Math::IntegrationOneDim::kGAUSS);
-                intFp = intOneDim_p.Integral(start1oPFit, end1oPFit);
+                float intFp = intOneDim_p.Integral(start1oPFit, end1oPFit);
                 if (intFp <= 0) std::cout << "ERROR > INTEGRAL FIT P IS <= 0.   ITG = " << intFp << std::endl;
+
+                float intP = p_forfit->Integral(p_forfit->FindBin(start1oPFit), p_forfit->FindBin(end1oPFit), "width");
+                SFp = (intFp > 0) ? intP / intFp : -1;
+                if (SFp < 0) useFitP = false;
+                f_p3 = f_p2;
             }
-
-            float intP = p->Integral(p->FindBin(start1oPFit), p->FindBin(end1oPFit));
-            SFp = (intFp > 0)? intP/intFp : -1;
-            if(SFp < 0) useFitP = false;
-            f_p3 = f_p2;
-
-            if (ptr2.Get()) statusFit = ptr2->Status();
-            else statusFit = 1;
         }
 
 
-        if (useFitP && statusFit != 0) {      // Bad fit
-            if (saveFits) { OutputHisto->cd(); p->Write(); }
-            std::cout << "  Bad fit 1/p, eta = " << eta->GetBinCenter(i) << " " << p->GetName() << std::endl;
+        if (statusFit != 0) {      // Bad fit
+            if (saveFits) { OutputHisto->cd(); p_forfit->Write(); }
+            std::cout << "  Bad fit 1/p, eta = " << eta->GetBinCenter(i) << " " << p_forfit->GetName() << "  " << std::to_string(workerID) << std::endl;
             useFitP = false;
-            //cout << "bad 1/p:     " << f_p.GetChisquare()/f_p.GetNDF() << endl;
-        } else {                              // Good fit
-            if (saveFits) { OutputHisto->cd(); p->Write(); }
-            //cout << "1/p:    " << f_p.GetChisquare()/f_p.GetNDF() << endl;
         }
-
-        //if (f_p.GetChisquare()/f_p.GetNDF() > 4.5) useFitP = false; // if chi2/ndf > 4.5 --> bad fit, don't use it (threshold set after looking at the distribution of chi2/ndf for all the fits)
+        else {                              // Good fit
+            if (saveFits) { OutputHisto->cd(); p_forfit->Write(); }
+        }
 
         ROOT::Math::IntegratorOneDim* intOneDimFP3 = nullptr;
         if (useFitP) {
             intOneDimFP3 = new ROOT::Math::IntegratorOneDim(*f_p3, ROOT::Math::IntegrationOneDim::kGAUSS);
         }
         float dedx_temp = (useOldIhFit)? 3.5 : start_fit;
-        float mom_temp = (useOld1oPFit)? 20 : end1oPFit;
+        float mom_temp = 0.8*end1oPFit;
 
         // ------------- If false: no fit -------------
 

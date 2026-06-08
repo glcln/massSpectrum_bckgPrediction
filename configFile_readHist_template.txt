@@ -1,1 +1,1 @@
-sample      tag_KC        dir       nPE    1    rebinEta      rebinIh     rebinMom  corrTemplateIh   fitIh   fitMom    useFit
+sample       nPE    1    rebinEta      rebinIh     rebinMom  corrTemplateIh   fitIh   fitMom    useFit
