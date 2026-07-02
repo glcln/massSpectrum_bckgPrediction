@@ -24,6 +24,7 @@ float systErr_ = 0.; //set to 0 for systematic studies
 
 
 
+
 // Scale the 1D-histogram given to the unit 
 void scale(TH1F* h) {
     h->Scale(1./h->Integral(0,h->GetNbinsX()+1));
@@ -84,6 +85,9 @@ class Region{
                           const std::string& etaName = "",
                           bool saveFits = false,
                           const int rebinp = 1,
+                          const float MyIhCut = C_data2024,
+                          const double par_p2 = 4.70839,
+                          const double par_p3 = 1.05005,
                           const UInt_t workerID = 0);
         void write();
 
@@ -119,6 +123,7 @@ class Region{
         TH1F* mass;
         TH1F* pred_mass;
         TH2F* mass_eta;
+        TH2F* mass_ih;
         TH2F* pred_mass_eta;
         TH1F* pred_mass_fitIh;
         TH1F* pred_mass_fitP;
@@ -176,7 +181,8 @@ void Region::initHisto(TFileDirectory &dir, int etabins, int ihbins, int pbins, 
     ias_pt = dir.make<TH2F>(("ias_pt"+suffix).c_str(),";pt [GeV];I_{as}",npt,ptlow,ptup,nias,iaslow,iasup);
     mass = dir.make<TH1F>(("mass"+suffix).c_str(),";Mass [GeV]",nmass,masslow,massup); 
     pred_mass = dir.make<TH1F>(("pred_mass"+suffix).c_str(),";Mass [GeV]",nmass,masslow,massup);
-    mass_eta = dir.make<TH2F>(("mass_eta"+suffix).c_str(),";Mass [GeV];#eta",nmass,masslow,massup,neta,etalow,etaup); 
+    mass_eta = dir.make<TH2F>(("mass_eta"+suffix).c_str(),";Mass [GeV];#eta",nmass,masslow,massup,neta,etalow,etaup);
+    mass_ih = dir.make<TH2F>(("mass_ih"+suffix).c_str(),";I_{h} [MeV/cm];Mass [GeV]",nih,ihlow,ihup, nmass,masslow,massup);
     pred_mass_eta = dir.make<TH2F>(("pred_mass_eta"+suffix).c_str(),";Mass [GeV];#eta",nmass,masslow,massup,neta,etalow,etaup); 
     
     mass->SetBinErrorOption(TH1::EBinErrorOpt::kPoisson);
@@ -193,6 +199,7 @@ void Region::fill(float& eta, float& p, float& pt, float& pterr, float& ih, floa
    ias_pt->Fill(pt,ias,w);
    mass->Fill(m,w);
    mass_eta->Fill(m,eta,w);
+   mass_ih->Fill(m,ih,w);
    pt_pterroverpt->Fill(pt,pterr/pt,w);
 }
 
@@ -211,11 +218,14 @@ void Region::fillPredMass(const std::string& filename,
                           const std::string& etaName = "",
                           bool saveFits = false,
                           const int rebinp = 1,
+                          const float MyIhCut = C_data2024,
+                          const double par_p2 = 4.70839,
+                          const double par_p3 = 1.05005,
                           const UInt_t workerID = 0) {
 
     // Debug Fit
     TFile* OutputHisto = nullptr;
-    std::string filenameOutputFit = "DebugFit/Fits_" + filename + "_" + st + ((useOldIhFit || useOld1oPFit) ? "_OldFit" : "_NewFit") + etaName + "_" + std::to_string(workerID) +".root";
+    std::string filenameOutputFit = "DebugFit/Fits_" + filename + "_" + st + ((useOldIhFit || useOld1oPFit) ? "_OldFit" : "_NewFit") + etaName + "_" + std::to_string(workerID) + '_' + std::to_string(MyIhCut) +  ".root";
     if (saveFits) {
         OutputHisto = new TFile(filenameOutputFit.c_str(), "RECREATE");
         OutputHisto->cd();
@@ -262,8 +272,17 @@ void Region::fillPredMass(const std::string& filename,
         if(start_fit > ih->GetBinCenter(lastBinContent)) start_fit = max_ih;
 
         if (useFitIh) {
-            ptr1 = ih->Fit(&f_ih, "QRSL", "", start_fit, endIhFit);
-            if (ptr1 && ptr1->Status() != 0) { // Bad fit
+            ptr1 = ih->Fit(&f_ih, "QRS", "", start_fit, endIhFit);
+            bool goodFit = ptr1.Get() && ptr1->Ndf() > 0 && ptr1->Chi2()/ptr1->Ndf() < 5;
+            if (!goodFit) { // Bad fit
+                
+                cout << "Bad fit Ih in " << ih->GetName() << " workerID=" << std::to_string(workerID)
+                          << "    status=" << ptr1->Status()
+                          << " covMatrixStatus=" << ptr1->CovMatrixStatus()
+                          << " isValid=" << ptr1->IsValid()
+                          << " edm=" << ptr1->Edm()
+                          << " chi2/ndf=" << ptr1->Chi2() << "/" << ptr1->Ndf()
+                          << " eta=" << eta->GetBinCenter(i) << endl;
                 if (saveFits) { OutputHisto->cd(); ih->Write(); }
                 useFitIh = false;
             }
@@ -271,16 +290,13 @@ void Region::fillPredMass(const std::string& filename,
                 if (saveFits) { OutputHisto->cd(); ih->Write(); }
             }
         }
-        else {
-            if (saveFits) { OutputHisto->cd(); ih->Write(); }         // No fit attempted
-        }
         TF1* const f_ih2 = &f_ih;
         float intFih = f_ih2->Integral(3, endIhFit);
         float intIh = ih->Integral(ih->FindBin(3), ih->FindBin(endIhFit));
 
         float SFih = (intFih > 0)? intIh/intFih : -1;
         if(SFih < 0 && useFitIh) {
-            std::cout<<"ERROR > INTEGRAL FIT IH IS <= 0.   ITG = " << intFih << " FOR ETA BIN #" << i << std::endl;
+            cout<<"ERROR > INTEGRAL FIT IH IS <= 0.   ITG = " << intFih << " FOR ETA BIN #" << i << std::endl;
             useFitIh = false;
         }
         
@@ -324,7 +340,17 @@ void Region::fillPredMass(const std::string& filename,
             const float endFracs[5] = {0.9f, 0.8f, 0.7f, 0.6f, 0.5f};
             float peak = p_forfit->GetBinCenter(p_forfit->GetMaximumBin());
 
-            for (unsigned int incrFit = 0; incrFit < 5; incrFit++) {
+            if (useOld1oPFit) {
+                f_p.SetParameter(0, p_forfit->GetMaximum());
+                f_p.FixParameter(1, 1.0);
+                f_p.SetParameter(2, par_p2);
+                f_p.SetParameter(3, par_p3);
+                f_p.SetParLimits(0, 0, 10*p_forfit->GetMaximum());
+                f_p.SetParLimits(2, 0, 10*par_p2);
+                f_p.SetParLimits(3, 0, 10*par_p3);
+            }
+
+            for (unsigned int incrFit = 0; incrFit < std::size(endFracs); incrFit++) {
 
                 if (useOld1oPFit)  end1oPFit = endFracs[incrFit] * peak;
                 else end1oPFit = 0.6 * peak;
@@ -332,7 +358,10 @@ void Region::fillPredMass(const std::string& filename,
                 if (end1oPFit <= start1oPFit) { statusFit = 1; continue; }
 
                 ptr2 = p_forfit->Fit(&f_p, "QRS", "", start1oPFit, end1oPFit);
-                statusFit = ptr2.Get() ? ptr2->Status() : 1;
+                bool converged = ptr2.Get() && ptr2->Status() == 0 && ptr2->Edm() < 1e-2;
+                bool chi2ok = ptr2.Get() && (ptr2->Ndf() < 4 || ptr2->Chi2()/ptr2->Ndf() < 7);
+                bool goodFitP = converged && chi2ok;
+                statusFit = goodFitP ? 0 : 1;
 
                 if (statusFit == 0) break;  // good fit, we keep it
             }
@@ -341,7 +370,7 @@ void Region::fillPredMass(const std::string& filename,
                 TF1* f_p2 = &f_p;
                 ROOT::Math::IntegratorOneDim intOneDim_p(*f_p2, ROOT::Math::IntegrationOneDim::kGAUSS);
                 float intFp = intOneDim_p.Integral(start1oPFit, end1oPFit);
-                if (intFp <= 0) std::cout << "ERROR > INTEGRAL FIT P IS <= 0.   ITG = " << intFp << std::endl;
+                if (intFp <= 0) cout << "ERROR > INTEGRAL FIT P IS <= 0.   ITG = " << intFp << std::endl;
 
                 float intP = p_forfit->Integral(p_forfit->FindBin(start1oPFit), p_forfit->FindBin(end1oPFit), "width");
                 SFp = (intFp > 0) ? intP / intFp : -1;
@@ -353,7 +382,14 @@ void Region::fillPredMass(const std::string& filename,
 
         if (statusFit != 0) {      // Bad fit
             if (saveFits) { OutputHisto->cd(); p_forfit->Write(); }
-            std::cout << "  Bad fit 1/p, eta = " << eta->GetBinCenter(i) << " " << p_forfit->GetName() << "  " << std::to_string(workerID) << std::endl;
+            cout << "Bad fit 1/p in " << p_forfit->GetName() << " workerID=" << std::to_string(workerID)
+                 << "    status=" << ptr2->Status()
+                 << " covMatrixStatus=" << ptr2->CovMatrixStatus()
+                 << " isValid=" << ptr2->IsValid()
+                 << " edm=" << ptr2->Edm()
+                 << " chi2/ndf=" << ptr2->Chi2() << "/" << ptr2->Ndf()
+                 << " eta=" << eta->GetBinCenter(i) << endl;
+            cout << f_p.GetParameter(0) << " " << f_p.GetParameter(1) << " " << f_p.GetParameter(2) << " " << f_p.GetParameter(3) << endl;
             useFitP = false;
         }
         else {                              // Good fit
@@ -373,6 +409,7 @@ void Region::fillPredMass(const std::string& filename,
                     //useFitP = false;
 
         // --------------------------------------------
+        int atLeastOne=0;
 
         // Loop over the bins in (p,ih)
         for(int j=1;j<p->GetNbinsX()+2;j++)
@@ -426,9 +463,9 @@ void Region::fillPredMass(const std::string& filename,
                                 invMom = 10000./(divmom+mom_sampling/2.);
                                 mass = GetMass(invMom,dedx,K,C);
                                 bin_mass = pred_mass->FindBin(mass);
-                                pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
+                                if (dedx >= MyIhCut) pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
                                 pred_mass_eta->SetBinContent(i,bin_mass,pred_mass_eta->GetBinContent(i,bin_mass)+weight);
-                                if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN ! 1" << std::endl;
+                                if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) cout << "ERROR : BIN CONTENT SET IS NAN ! 1" << std::endl;
 
                                 pred_mass_fitIh_fitP->SetBinContent(bin_mass,pred_mass_fitIh_fitP->GetBinContent(bin_mass)+weight);
                                 ih_p_cross1D_fit->SetBinContent(j,k,ih_p_cross1D_fit->GetBinContent(j,k)+weight);
@@ -441,9 +478,9 @@ void Region::fillPredMass(const std::string& filename,
                             invMom = 10000./p->GetBinCenter(j);
                             mass = GetMass(invMom,dedx,K,C);
                             bin_mass = pred_mass->FindBin(mass);
-                            pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
+                            if (dedx >= MyIhCut) pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
                             pred_mass_eta->SetBinContent(i,bin_mass,pred_mass_eta->GetBinContent(i,bin_mass)+weight);
-                            if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN ! 2" << std::endl;
+                            if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) cout << "ERROR : BIN CONTENT SET IS NAN ! 2" << std::endl;
                             
                             pred_mass_fitIh->SetBinContent(bin_mass,pred_mass_fitIh->GetBinContent(bin_mass)+weight);
                             ih_p_cross1D_fit->SetBinContent(j,k,ih_p_cross1D_fit->GetBinContent(j,k)+weight);
@@ -453,6 +490,7 @@ void Region::fillPredMass(const std::string& filename,
                 else{
                     // use 1/p fit
                     if(mom < mom_temp && mom > 0 && useFitP){
+                        //if (c_ih < 100 && dedx > dedx_temp && atLeastOne==0) { cout << "no Ih but P " << useFitIh << " " << SFih << endl; atLeastOne++;}
                         for(double divmom=pLowEdge; divmom<pUpEdge; divmom+=mom_sampling){
                             c_p = intOneDimFP3->Integral(divmom,divmom+mom_sampling);
                             c_p *= SFp;
@@ -465,9 +503,9 @@ void Region::fillPredMass(const std::string& filename,
                             invMom = 10000./(divmom+mom_sampling/2.);
                             mass = GetMass(invMom,dedx,K,C);
                             bin_mass = pred_mass->FindBin(mass);
-                            pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
+                            if (dedx >= MyIhCut) pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
                             pred_mass_eta->SetBinContent(i,bin_mass,pred_mass_eta->GetBinContent(i,bin_mass)+weight);
-                            if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN ! 3" << std::endl;
+                            if( std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) cout << "ERROR : BIN CONTENT SET IS NAN ! 3" << std::endl;
                             
                             pred_mass_fitP->SetBinContent(bin_mass,pred_mass_fitP->GetBinContent(bin_mass)+weight);
                             ih_p_cross1D_fit->SetBinContent(j,k,ih_p_cross1D_fit->GetBinContent(j,k)+weight);
@@ -483,9 +521,9 @@ void Region::fillPredMass(const std::string& filename,
                         mass = GetMass(invMom,dedx,K,C);
                         bin_mass = pred_mass->FindBin(mass);
                         
-                        pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
+                        if (dedx >= MyIhCut) pred_mass->SetBinContent(bin_mass,pred_mass->GetBinContent(bin_mass)+weight);
                         pred_mass_eta->SetBinContent(i,bin_mass,pred_mass_eta->GetBinContent(i,bin_mass)+weight);
-                        if(std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) std::cout << "ERROR : BIN CONTENT SET IS NAN ! 4" << std::endl;
+                        if(std::isnan(pred_mass->GetBinContent(bin_mass)+weight)) cout << "ERROR : BIN CONTENT SET IS NAN ! 4" << std::endl;
                         
                         pred_mass_noFit->SetBinContent(bin_mass,pred_mass_noFit->GetBinContent(bin_mass)+weight);
                         ih_p_cross1D_fit->SetBinContent(j,k,ih_p_cross1D_fit->GetBinContent(j,k)+weight);
@@ -517,6 +555,7 @@ void Region::write() {
     mass->Write();
     pred_mass->Write();
     mass_eta->Write();
+    mass_ih->Write();
     pred_mass_eta->Write();
     pred_mass_fitIh->Write();
     pred_mass_fitP->Write();

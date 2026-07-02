@@ -9,7 +9,7 @@ parser = OptionParser(usage="Usage: python %prog codeVersion")
 (opt,args) = parser.parse_args()
 
 datasetList = [
-    "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p24",
+    "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p29",
 ]
 
 nPE = "200"

@@ -1,15 +1,3 @@
-// Usage:
-// root -l -q -b step2_backgroundPrediction.C
-
-#include <TROOT.h>
-#include <TChain.h>
-#include <TFile.h>
-#include "TRandom3.h"
-#include <TH2.h>
-#include <TStyle.h>
-#include <TCanvas.h>
-#include <TGraphErrors.h>
-
 #include "CommonFunctions.h"
 
 using namespace std;
@@ -48,14 +36,18 @@ void step2_backgroundPrediction() {
 
     std::string st_sample = "data2024";
 
-    //std::string Ext = "_METanalysis_Eta1";
-    std::string Ext = "_METanalysis_Eta1_2p4";
-    //std::string Ext = "_METanalysis_Eta2p4";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4";
+    std::string Ext = "_METanalysis_TestPUppiMETCut_Eta2p4";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1p2_2p2";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1p2_2p4";
     
     std::string etaName = "";
-    if (Ext == "_METanalysis_Eta1") etaName = "_Eta1";
-    else if (Ext == "_METanalysis_Eta1_2p4") etaName += "_Eta1_2p4";
-    else if (Ext == "_METanalysis_Eta2p4") etaName += "_Eta2p4";
+    if (Ext == "_METanalysis_TestPUppiMETCut_Eta1") etaName = "_Eta1";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4") etaName += "_Eta1_2p4";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta2p4") etaName += "_Eta2p4";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1p2_2p2") etaName += "_Eta1p2_2p2";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1p2_2p4") etaName += "_Eta1p2_2p4";
     outfilename_ += etaName;
 
 
@@ -75,6 +67,11 @@ void step2_backgroundPrediction() {
     else if ((!useOldIhFit && !useOld1oPFit) && useFit) outfilename_ += "_NewFit";
     else if (!useFit) outfilename_ += "_NoFit";
 
+    // ---
+    std::vector <float> MyIhCut_values = {2.9784, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6};
+    std::vector <std::string> MyIhCut_names  = {"_IhC", "_Ih3p1", "_Ih3p2", "_Ih3p3", "_Ih3p4", "_Ih3p5", "_Ih3p6"};
+    float MyIhCut = MyIhCut_values[0];
+    outfilename_ += MyIhCut_names[0];
 
     std::cout << "Input file:      " << DataSetName << std::endl;
     std::cout << "Output file:     " << outfilename_ << std::endl;
@@ -82,7 +79,7 @@ void step2_backgroundPrediction() {
     TFile* ofile = new TFile((outfilename_+".root").c_str(),"RECREATE");
 
     
-    
+
     // ------------------------------------------------------------------
     //                              If Fpixel
     //
@@ -136,13 +133,21 @@ void step2_backgroundPrediction() {
 
         // In 8fp9
     blind = false;
-    //bckgEstimate(DataSetName, st_sample, rc_3fp8, rc_3fp8, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
-    //              "8fp9", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, blind);
+    // bckgEstimate(DataSetName, st_sample, rc_3fp8, rc_3fp8, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
+    //              "8fp9", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
+    //              MyIhCut, blind);
+
+    // Debug by taking templates in D
+    bckgEstimate(DataSetName, st_sample, rd_8fp9, rd_8fp9, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
+                 "8fp9", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
+                 MyIhCut, blind);
+
 
         // In 9fp10 with A and C in 3fp9
     blind = true;
-    bckgEstimate(DataSetName, st_sample, rc_3fp9, rc_3fp9, rbc_9fp10, ra_3fp9, rd_9fp10, ifIhpSAME, rb_9fp10,
-                  "9fp10", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, blind);
+    // bckgEstimate(DataSetName, st_sample, rc_3fp9, rc_3fp9, rbc_9fp10, ra_3fp9, rd_9fp10, ifIhpSAME, rb_9fp10,
+    //              "9fp10", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
+    //              MyIhCut, blind);
     
 
 

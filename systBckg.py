@@ -11,6 +11,7 @@ from ROOT import TFile, THStack, TCanvas, TLegend, TLatex, TPad, TH1, TH2, TLine
 import tdrstyle
 
 ROOT.gROOT.SetBatch(True)
+ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 tdrstyle.setTDRStyle()
 
@@ -251,17 +252,18 @@ def plotSummary(syst_stat,
 
 
 # Setup
-onlyNominal = False    
+onlyNominal = True    
 version     = "V12p24"
-etaname     = "Eta2p4"
+etaname     = "Eta1_2p4"
 year        = "2024"
 sample      = "JetMET"
-region      = "9fp10"
-option      = "_etaAbs_etaRebinPerso_1oPRebinBig_Oldfit" #"_etaAbs"
-option2     = "_OldFit"
+region      = "8fp9"
+option      = "_etaAbs_Ihcut_v2"
+option2     = "_OldFit_IhC"
+option3     = "Plots_NewFit_8fp9_mass_Ihcut_C/"
 
 directory   = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_" + version + "__" + region + option + "/" + etaname + "/"
-oDir        = directory + "SystCombined/"
+oDir        = directory + option3 + "SystCombined/"
 ofile       = TFile(oDir + "sysToTBinned_" + year + "_" + region + ".root", "RECREATE")
 
 plotType    = "mass_predBC_"
@@ -271,7 +273,7 @@ sizeRebinning = len(rebinning) - 1
 
 
 # Only stat for the nominal
-inputNominal = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_EtaReweighting_" + etaname + option2 + ".root" 
+inputNominal = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP4_EtaReweighting_" + etaname + option2 + ".root" 
 ifileNominal = TFile(inputNominal)
 
 predNominal_def = ifileNominal.Get(plotType + region)

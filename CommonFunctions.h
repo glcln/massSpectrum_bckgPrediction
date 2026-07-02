@@ -5,6 +5,12 @@
 #include "TDirectory.h"
 #include <TRatioPlot.h>
 #include <THStack.h>
+#include <TROOT.h>
+#include <TChain.h>
+#include "TRandom3.h"
+#include <TH2.h>
+#include <TStyle.h>
+#include <TGraphErrors.h>
 
 #include "Regions.h"
 
@@ -150,6 +156,8 @@ void loadHistograms(Region& r,
 
     r.mass                 = (TH1F*) f->Get(("mass_"+regionName).c_str())->Clone();
     r.mass_eta             = (TH2F*) f->Get(("mass_eta_"+regionName).c_str())->Clone();
+    r.mass_ih              = (TH2F*) f->Get(("mass_ih_"+regionName).c_str())->Clone();
+    
 
     r.pred_mass            = (TH1F*) r.mass->Clone(); r.pred_mass->SetName(("pred_mass_"+regionName).c_str()); r.pred_mass->Reset();
     r.pred_mass_eta        = (TH2F*) r.mass_eta->Clone(); r.pred_mass_eta->SetName(("pred_mass_eta_"+regionName).c_str()); r.pred_mass_eta->Reset();
@@ -175,11 +183,24 @@ void loadHistograms(Region& r,
                                               1., 1.2, 1.4, 1.6, 1.8, 2., 2.2, 2.4};
 
 
+
+
+    std::vector<double> RebinEta_Down_Eta1p2_2p2 = {-2.4, -2.2, -1.85, -1.55, -1.2, +1.2, +1.55, +1.85, +2.2, +2.4};
+    std::vector<double> RebinEta_Nom_Eta1p2_2p2 = {-2.4, -2.2, -1.95, -1.70, -1.45, -1.2, +1.2, +1.45, +1.70, +1.95, +2.2, +2.4};
+    std::vector<double> RebinEta_Up_Eta1p2_2p2 = {-2.4, -2.2, -2.0, -1.8, -1.6, -1.4, -1.2, +1.2, +1.4, +1.6, +1.8, +2.0, +2.2, +2.4};
+    
+    std::vector<double> RebinEta_Down_Eta1p2_2p4 = {-2.4, -2.0, -1.6, -1.2, +1.2, +1.6, +2.0, +2.4};
+    std::vector<double> RebinEta_Nom_Eta1p2_2p4 = {-2.4, -2.1, -1.8, -1.5, -1.2, +1.2, +1.5, +1.8, +2.1, +2.4};
+    std::vector<double> RebinEta_Up_Eta1p2_2p4 = {-2.4, -2.15, -1.90, -1.70, -1.45, -1.2, +1.2, +1.45, +1.70, +1.90, +2.15, +2.4};
+    
+
+
     if (bool_rebin) {
 
         r.ih_p->Rebin2D(rebinp,rebinih);
         r.ias_p->Rebin2D(rebinp,rebinih);
         r.ias_pt->Rebin2D(rebinp,rebinih);
+        r.mass_ih->Rebin2D(rebinih,1);
 
         if (rebineta==2 || rebineta==4 || rebineta==8) {
 
@@ -190,23 +211,29 @@ void loadHistograms(Region& r,
                 else if (rebineta == 4) RebinEtaVecPtr = &RebinEta_Nom_ALLeta;
                 else                    RebinEtaVecPtr = &RebinEta_Up_ALLeta;   // rebineta == 2
             }
-            else {
+            else if (regionName.find("Eta1") != std::string::npos || regionName.find("Eta1_2p4") != std::string::npos){
                 if (rebineta == 8)      RebinEtaVecPtr = &RebinEta_Down_Eta1_AND_Eta1_2p4;
                 else if (rebineta == 4) RebinEtaVecPtr = &RebinEta_Nom_ALLeta;
                 else                    RebinEtaVecPtr = &RebinEta_Up_ALLeta;   // rebineta == 2
+            }
+            else if (regionName.find("Eta1p2_2p2") != std::string::npos) {
+                if (rebineta == 8)      RebinEtaVecPtr = &RebinEta_Down_Eta1p2_2p2;
+                else if (rebineta == 4) RebinEtaVecPtr = &RebinEta_Nom_Eta1p2_2p2;
+                else                    RebinEtaVecPtr = &RebinEta_Up_Eta1p2_2p2;   // rebineta == 2
+            }
+            else if (regionName.find("Eta1p2_2p4") != std::string::npos) {
+                if (rebineta == 8)      RebinEtaVecPtr = &RebinEta_Down_Eta1p2_2p4;
+                else if (rebineta == 4) RebinEtaVecPtr = &RebinEta_Nom_Eta1p2_2p4;
+                else                    RebinEtaVecPtr = &RebinEta_Up_Eta1p2_2p4;   // rebineta == 2
+            }
+            else {
+                std::cerr << "Error: region name does not contain expected eta range for rebinning" << std::endl;
+                return;
             }
 
             std::vector<double>& RebinEtaVec = *RebinEtaVecPtr;
             int nEta = RebinEtaVec.size() - 1;
             double* eEta = RebinEtaVec.data();
-
-            //check
-            cout << "RebinEtaVec" << endl;
-            for (int i = 0; i < RebinEtaVec.size(); i++) {
-                cout << RebinEtaVec[i] << " ";
-            }
-            cout << endl;
-
 
             // eta_p : X=p (uniform), Y=eta (moving)
             r.eta_p->RebinX(rebinp);
@@ -263,8 +290,8 @@ void loadHistograms(Region& r,
 
 TH1F* poissonHisto(const TH1F& h,TRandom3* RNG) {
     TH1F* hres = (TH1F*) h.Clone();
-    for(int i=0;i<h.GetNbinsX()+1;i++){
-        hres->SetBinContent(i,RNG->Poisson(h.GetBinContent(i)));
+    for(int i=0; i<=h.GetNbinsX()+1; i++){
+        hres->SetBinContent(i, RNG->Poisson(h.GetBinContent(i)));
     }
     return hres;
 }
@@ -272,9 +299,9 @@ TH1F* poissonHisto(const TH1F& h,TRandom3* RNG) {
 
 TH2F* poissonHisto(const TH2F& h,TRandom3* RNG) {
     TH2F* hres = (TH2F*) h.Clone();
-    for(int i=0;i<h.GetNbinsX()+1;i++){
-        for(int j=0;j<h.GetNbinsY()+1;j++){
-            hres->SetBinContent(i,j,RNG->Poisson(h.GetBinContent(i,j)));
+    for(int i=0; i<=h.GetNbinsX()+1; i++){
+        for(int j=0; j<=h.GetNbinsY()+1; j++){
+            hres->SetBinContent(i, j, RNG->Poisson(h.GetBinContent(i,j)));
         }
     }
     return hres;
@@ -464,6 +491,7 @@ void bckgEstimate(const std::string& filename,
                   const int& fitIh = 1,
                   const int& fitP = 1,
                   const int rebinp = 1,
+                  const float MyIhCut = C_data2024,
                   bool blind = false) {
 
     std::vector<TH1F> vPE_;
@@ -513,7 +541,7 @@ void bckgEstimate(const std::string& filename,
                         const Region& B_ifIhpSAME, const std::string& st, const int& nPE = 200, 
                         const bool useFit = true, const bool useOldIhFit = false, const bool useOld1oPFit = false,
                         const bool corrTemplateIh = false, const std::string& etaName = "", const bool& saveFits = false, 
-                        const int& fitIh = 1, const int& fitP = 1, const int rebinp = 1,
+                        const int& fitIh = 1, const int& fitP = 1, const int rebinp = 1, const float MyIhCut = C_data2024,
                         bool blind = false, const double& par_p2 = 4.70839, const double& par_p3 = 1.05005)
                         -> std::tuple<TH1F, TH2F, float>
     {
@@ -556,7 +584,7 @@ void bckgEstimate(const std::string& filename,
         
         TF1 f_p("f_p", useOld1oPFit ? "[0]*([1]+erf((log(x)-[2])/[3]))" : "0.5*(exp([0]*x*x+[1]*x)+exp(-[0]*x*x-[1]*x))-1", 0, rangemax_p);
         if (useOld1oPFit) {
-            f_p.SetParLimits(0, 0, 9000);
+            f_p.SetParLimits(0, 0, 1);
             f_p.FixParameter(1, 1.0);
             f_p.SetParameter(2, par_p2);
             f_p.SetParameter(3, par_p3);
@@ -571,7 +599,7 @@ void bckgEstimate(const std::string& filename,
         float max_ih = ih_base->GetBinCenter(ih_base->GetMaximumBin());
 
         TF1 f_ihg("f_ihg", "gaus", max_ih, 8);
-        f_ihg.SetParameter(0, 0.5*ih_base->Integral());
+        f_ihg.SetParameter(0, 0.01*ih_base->Integral());
         f_ihg.SetParameter(1, max_ih);
         f_ihg.SetParameter(2, ih_base->GetStdDev());
 
@@ -581,16 +609,17 @@ void bckgEstimate(const std::string& filename,
         bc.pred_mass->Reset();
         bc.pred_mass_eta->Reset();
 
-        TH2F* a_ih_eta = poissonHisto(a_ih_eta_base,RNG);
-        TH2F* b_ih_eta = poissonHisto(b_ih_eta_base,RNG);
-        TH2F* b_ifIhpSAME_ih_eta = poissonHisto(b_ifIhpSAME_ih_eta_base,RNG);
-        TH2F* b_eta_p = poissonHisto(b_eta_p_base,RNG);
-        TH2F* c_eta_p = poissonHisto(c_eta_p_base,RNG);
+        TH2F* a_ih_eta = poissonHisto(a_ih_eta_base, RNG);
+        TH2F* b_ih_eta = poissonHisto(b_ih_eta_base, RNG);
+        TH2F* c_ih_eta = poissonHisto(c_ih_eta_base, RNG);
+        TH2F* b_ifIhpSAME_ih_eta = poissonHisto(b_ifIhpSAME_ih_eta_base, RNG);
+        TH2F* b_eta_p = poissonHisto(b_eta_p_base, RNG);
+        TH2F* c_eta_p = poissonHisto(c_eta_p_base, RNG);
         
         TH1F* b_ih = (TH1F*)b_ih_eta->ProjectionY();
-        TH1F* b_eta = poissonHisto(*b_eta_base,RNG);
-        TH1F* b_ifIhpSAME_eta = poissonHisto(*b_ifIhpSAME_eta_base,RNG);
-        TH1F* a_eta = poissonHisto(*a_eta_base,RNG);
+        TH1F* b_eta = poissonHisto(*b_eta_base, RNG);
+        TH1F* b_ifIhpSAME_eta = poissonHisto(*b_ifIhpSAME_eta_base, RNG);
+        TH1F* a_eta = poissonHisto(*a_eta_base, RNG);
         
         bool bloutaba = false;
         if(ifIhpSAME) etaReweighingP(b_ih_eta, b_ifIhpSAME_eta, a_eta); //bloutaba = true; in C
@@ -601,16 +630,30 @@ void bckgEstimate(const std::string& filename,
         bc.eta_p = c_eta_p;
         bc.ih_eta = b_ih_eta;
         bc.fillPredMass(filename, st, st_sample, f_p, f_ihg, useFit, fitIh, fitP, -1, 
-                        useOldIhFit, useOld1oPFit, etaName, saveFits, rebinp, workerID);
+                        useOldIhFit, useOld1oPFit, etaName, saveFits, rebinp, MyIhCut,
+                        par_p2, par_p3, workerID);
         
         float normA = a_ih_eta->Integral(0, a_ih_eta->GetNbinsX()+1, 0, a_ih_eta->GetNbinsY()+1);
         float normB = b_ih_eta->Integral(0, b_ih_eta->GetNbinsX()+1, 0, b_ih_eta->GetNbinsY()+1);
         float normC = c_eta_p->Integral(0, c_eta_p->GetNbinsX()+1, 0, c_eta_p->GetNbinsY()+1);
+        float normB_ifIhpSAME = b_ifIhpSAME_ih_eta->Integral(0, b_ifIhpSAME_ih_eta->GetNbinsX()+1, 0, b_ifIhpSAME_ih_eta->GetNbinsY()+1);
 
-        float normalisationABC = normB*normC/normA;
-        if (ifIhpSAME) normalisationABC = b_ifIhpSAME_ih_eta->Integral(0, b_ifIhpSAME_ih_eta->GetNbinsX()+1,
-                                                                       0, b_ifIhpSAME_ih_eta->GetNbinsY()+1) * normC / normA;
+        if (MyIhCut > C_data2024) {
+            normA = a_ih_eta->Integral(0, a_ih_eta->GetNbinsX()+1, a_ih_eta->GetYaxis()->FindBin(MyIhCut), a_ih_eta->GetNbinsY()+1);
+            normB = b_ih_eta->Integral(0, b_ih_eta->GetNbinsX()+1, b_ih_eta->GetYaxis()->FindBin(MyIhCut), b_ih_eta->GetNbinsY()+1);
+            normC = c_ih_eta->Integral(0, c_ih_eta->GetNbinsX()+1, c_ih_eta->GetYaxis()->FindBin(MyIhCut), c_ih_eta->GetNbinsY()+1);
+            normB_ifIhpSAME = b_ifIhpSAME_ih_eta->Integral(0, b_ifIhpSAME_ih_eta->GetNbinsX()+1, b_ifIhpSAME_ih_eta->GetYaxis()->FindBin(MyIhCut), b_ifIhpSAME_ih_eta->GetNbinsY()+1);
+        }
+
+        float normalisationABC = normB * normC / normA;
+        if (ifIhpSAME) normalisationABC = normB_ifIhpSAME * normC / normA;
+
+
+        // TEMPORARY
+        normalisationABC = bc.pred_mass->Integral();
+        // TEMPORARY
         
+
         bc.pred_mass->Scale(normalisationABC/bc.pred_mass->Integral());
         bc.pred_mass_eta->Scale(normalisationABC/bc.pred_mass_eta->Integral());
 
@@ -630,7 +673,8 @@ void bckgEstimate(const std::string& filename,
     // Loop on the toys
     ROOT::TProcessExecutor workers(26);
     auto workItemToRun = std::bind (workItem, _1, filename, st_sample, B, C, BC, A, D, ifIhpSAME, B_ifIhpSAME, st, nPE,
-                                    useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, blind, par_p2, par_p3);
+                                    useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
+                                    MyIhCut, blind, par_p2, par_p3);
     
     auto vPE = workers.Map(workItemToRun, ROOT::TSeqI(nPE));
 
@@ -650,21 +694,23 @@ void bckgEstimate(const std::string& filename,
     // Mean histogram of the toys
     TH1F h_temp = meanHistoPE(histo_pred_mass);
     TH2F h_temp_eta = meanHistoPE_2D(histo_pred_mass_eta);
-    std::cout<<"Mean histo of all PE entries : " << h_temp.GetEntries() << " , and integral : " << h_temp.Integral() << std::endl;
-    std::cout<<"Mean histo of bc.pred_mass BEFORE changing it to NPE : " << bc.pred_mass->GetEntries() << " , and integral : " << bc.pred_mass->Integral() << std::endl;
+    
     if(nPE>1){ bc.pred_mass = &h_temp; bc.pred_mass_eta = &h_temp_eta; }
     float avgNormalisation = std::accumulate(normalisations.begin(), normalisations.end(), 0.0f) / normalisations.size();
 
-    if(blind) blindMass(d.mass,300);
-     
-    std::cout<<"Before overflowLastBin : bc.pred_mass entries : " << bc.pred_mass->GetEntries() << " and d.mass entries : " << d.mass->GetEntries() << std::endl; 
-    std::cout<<"Before overflowLastBin : bc.pred_mass integral : " << bc.pred_mass->Integral() << " and d.mass integral : " << d.mass->Integral() << std::endl; 
-    overflowLastBin(d.mass);
+
+    // Case Ih cut !!!
+    TH1F* d_mass_ih_cut;
+    if (MyIhCut > C_data2024) d_mass_ih_cut = (TH1F*) d.mass_ih->ProjectionY(("mass_obs_"+st).c_str(), d.mass_ih->GetXaxis()->FindBin(MyIhCut), d.mass_ih->GetNbinsX()+1);
+    else d_mass_ih_cut = (TH1F*) d.mass->Clone(("mass_obs_"+st).c_str());
+    
+    if(blind) blindMass(d_mass_ih_cut,300);
+    overflowLastBin(d_mass_ih_cut);
     overflowLastBin(bc.pred_mass);
 
 
     // Saving histograms
-    saveHistoRatio(d.mass,bc.pred_mass,("mass_obs_"+st).c_str(),("mass_predBC_"+st).c_str(),("mass_predBCR_"+st).c_str());
+    saveHistoRatio(d_mass_ih_cut, bc.pred_mass, ("mass_obs_"+st).c_str(), ("mass_predBC_"+st).c_str(), ("mass_predBCR_"+st).c_str());
 
     bc.pred_mass_eta->Write();
     bc.pred_mass_eta->ProjectionY()->Write();

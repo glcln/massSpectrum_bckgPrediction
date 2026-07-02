@@ -5,7 +5,7 @@ parser = OptionParser(usage="Usage: python %prog codeVersion")
 (opt,args) = parser.parse_args()
 
 datasetList = [
-    "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p24",
+    "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p31",
 ]
 
 nPE = "200"
@@ -48,7 +48,6 @@ for dataset in datasetList:
         os.system("sed -i 's|corrTemplateIh|" + conf[7] + "|g' configFile_readHisto_toLaunch.txt")
 
         os.system("cat configFile_readHisto_toLaunch.txt")
-        os.system("time root -l -q -b step2_backgroundPrediction.C")#  &> exit.txt")
-        #os.system("root -l -b -q 'exit_displayChi2.C(\"exit.txt\",\"exit_displayChi2_" + conf[0] + ".root\")'")    
+        os.system("time root -l -q -b step2_backgroundPrediction.C") 
     i += 1
 

@@ -11,6 +11,7 @@ from ROOT import TFile, THStack, TCanvas, TLegend, TLatex, TPad, TH1, TH2, TLine
 import tdrstyle
 
 ROOT.gROOT.SetBatch(True)
+ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 tdrstyle.setTDRStyle()
 

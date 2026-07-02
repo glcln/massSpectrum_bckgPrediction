@@ -234,6 +234,60 @@ def PE_Pred(obs,h,nPE):
         h_KS.Fill(KS)
     return h_chi2, h_KS
 
+def MyoverflowInLastBin(h):
+    res = h.Clone()
+    res.SetBinContent(h.GetNbinsX(), h.GetBinContent(h.GetNbinsX()) + h.GetBinContent(h.GetNbinsX() + 1))
+    res.SetBinContent(h.GetNbinsX()+1, 0)
+    return res
+
+def MyunderflowInFirstBin(h):
+    res = h.Clone()
+    res.SetBinContent(1, h.GetBinContent(0) + h.GetBinContent(1))
+    res.SetBinContent(0, 0)
+    return res
+
+def statErrRInt(h1, name):
+    statErr = h1.Clone()
+    statErr.SetName(name)
+    e = ctypes.c_double(0.0)
+    for i in range(1, statErr.GetNbinsX()):
+        c = h1.IntegralAndError(i, h1.GetNbinsX(), e, "")
+        if e.value > 0:
+            statErr.SetBinContent(i, e.value / c)
+        else:
+            statErr.SetBinContent(i, 0)
+    return 100 * statErr
+
+def statErr(h1, name):
+    statErr = h1.Clone()
+    statErr.SetName(name)
+    for i in range (1, statErr.GetNbinsX()):
+        if statErr.GetBinContent(i)>0:
+            statErr.SetBinContent(i, statErr.GetBinError(i)/statErr.GetBinContent(i))
+        else:
+            statErr.SetBinContent(i,0)
+    return 100*statErr
+
+def allSet(h, sizeRebinning,  rebinning , st):
+    h = h.Rebin(sizeRebinning, st, rebinning)
+    h = MyoverflowInLastBin(h)
+    h = MyunderflowInFirstBin(h)
+    h.Scale(1./h.Integral())
+    return h
+
+def getNominalSyst(ifile, plotType, region, sizeRebinning, rebinning):
+    pred = ifile.Get(plotType + region)
+    pred = allSet(pred, sizeRebinning, rebinning, "nominal_def")
+
+    syst_stat = statErrRInt(pred, "Stat")
+    syst_stat_binned = statErr(pred, "Stat_binned")
+
+    for h in (pred, syst_stat, syst_stat_binned):
+        h.SetDirectory(0)
+    ifile.Close()
+
+    return syst_stat, syst_stat_binned
+
 
 #----------------------------------------------------
 #                       Main
@@ -282,7 +336,7 @@ def main(argv):
     isData      = True
     labelRegion = region
     signal      = False
-    option      = "_etaAbs_rebinEta"#_chi2cut"
+    option      = "_etaAbs_Ihcut_v2"#_chi2cut"
 
 
     ifile = ROOT.TFile(inputfile)
@@ -290,7 +344,7 @@ def main(argv):
     obs = ifile.Get("mass_obs_" + region)
     pred = ifile.Get("mass_predBC_" + region)
     
-    if (region=="8fp9"): C_mass = ifile.Get("mass_regionC_3fp8_" + labelName)
+    if (region=="8fp9"): C_mass = ifile.Get("mass_regionD_8fp9_" + labelName)#C_mass = ifile.Get("mass_regionC_3fp8_" + labelName)
     else: C_mass = ifile.Get("mass_obs_" + region)
     pred_noSyst = addSyst(pred,0.0)
 
@@ -352,16 +406,7 @@ def main(argv):
     else:
         print(" /!\ only nominal")
 
-        ifileSystnom = None
-        if (("MET" in inputfile) and ("/Eta2p4/" in inputfile)):
-            ifileSystnom = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta2p4/SystCombined/sysToTBinned_2024_" + region + ".root")
-        elif (("MET" in inputfile) and ("/Eta1_2p4/" in inputfile)):
-            ifileSystnom = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta1_2p4/SystCombined/sysToTBinned_2024_" + region + ".root")
-        elif (("MET" in inputfile) and ("/Eta1/" in inputfile)):
-            ifileSystnom = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + option + "/Eta1/SystCombined/sysToTBinned_2024_" + region + ".root")
-        print(" syst. file: ", ifileSystnom.GetName())
-
-        histoOfSystnom = ifileSystnom.Get("Stat_binned")
+        syst_stat, histoOfSystnom = getNominalSyst(ifile, "mass_predBC_", region, sizeRebinning, rebinning)
         (pred, predD, predU) = addHSyst(pred, histoOfSystnom, pred_noCorrBias)
         (pred_noBlind, pred_noBlindU, pred_noBlindD) = addHSyst(pred_noBlind, histoOfSystnom, pred_noCorrBias)
 
