@@ -264,16 +264,15 @@ void Region::fillPredMass(const std::string& filename,
 
         // Ih fit
         TFitResultPtr ptr1 = 0;
-
         float max_ih = ih->GetBinCenter(ih->GetMaximumBin());
-        float start_fit = (useOldIhFit)? 3 : 1.2*max_ih;
+        float start_fit = (useOldIhFit)? 3 : 1.1*max_ih; // 1.1*max_ih; for gauss
         int lastBinContent = ih->GetNbinsX();
         while(ih->GetBinContent(lastBinContent)==0) lastBinContent--;
         if(start_fit > ih->GetBinCenter(lastBinContent)) start_fit = max_ih;
 
         if (useFitIh) {
             ptr1 = ih->Fit(&f_ih, "QRS", "", start_fit, endIhFit);
-            bool goodFit = ptr1.Get() && ptr1->Ndf() > 0 && ptr1->Chi2()/ptr1->Ndf() < 5;
+            bool goodFit = ptr1.Get() && ptr1->Ndf() > 0 && ptr1->Chi2()/ptr1->Ndf() < 6;
             if (!goodFit) { // Bad fit
                 
                 cout << "Bad fit Ih in " << ih->GetName() << " workerID=" << std::to_string(workerID)
@@ -282,7 +281,8 @@ void Region::fillPredMass(const std::string& filename,
                           << " isValid=" << ptr1->IsValid()
                           << " edm=" << ptr1->Edm()
                           << " chi2/ndf=" << ptr1->Chi2() << "/" << ptr1->Ndf()
-                          << " eta=" << eta->GetBinCenter(i) << endl;
+                          << " eta=" << eta->GetBinCenter(i)
+                          << " p-value=" << ptr1->Prob() << endl;
                 if (saveFits) { OutputHisto->cd(); ih->Write(); }
                 useFitIh = false;
             }
@@ -290,6 +290,7 @@ void Region::fillPredMass(const std::string& filename,
                 if (saveFits) { OutputHisto->cd(); ih->Write(); }
             }
         }
+
         TF1* const f_ih2 = &f_ih;
         float intFih = f_ih2->Integral(3, endIhFit);
         float intIh = ih->Integral(ih->FindBin(3), ih->FindBin(endIhFit));
@@ -326,19 +327,18 @@ void Region::fillPredMass(const std::string& filename,
         // Taking the fit from the Down variation, as it is the one with the thicker bins, thus less statistical fluctuations for the fit to converge
         TH1F *p_forfit = (TH1F*) p->Clone(Form("forfit_p_eta%d", i));
         p_forfit->SetDirectory(nullptr);
-        if (rebinp == 2) p_forfit->Rebin(4);    // Up variation: already upstream Rebin(2)
-        if (rebinp == 4) p_forfit->Rebin(2);    // Nominal     : already upstream Rebin(4)
 
-        for (int b = 1; b <= p_forfit->GetNbinsX(); b++) {
-            if (p_forfit->GetBinContent(b) > 0) {
-                start1oPFit = p_forfit->GetBinCenter(b);
-                break;
-            }
-        }
+        // for (int b = 1; b <= p_forfit->GetNbinsX(); b++) {
+        //     if (p_forfit->GetBinContent(b) > 0) {
+        //         start1oPFit = p_forfit->GetBinCenter(b);
+        //         break;
+        //     }
+        // }
 
+        const float endFracs[5] = {0.9f, 0.8f, 0.7f, 0.6f, 0.5f};
+        float peak = p_forfit->GetBinCenter(p_forfit->GetMaximumBin());
+        int incrFit_end = 0;
         if (useFitP) {
-            const float endFracs[5] = {0.9f, 0.8f, 0.7f, 0.6f, 0.5f};
-            float peak = p_forfit->GetBinCenter(p_forfit->GetMaximumBin());
 
             if (useOld1oPFit) {
                 f_p.SetParameter(0, p_forfit->GetMaximum());
@@ -359,10 +359,13 @@ void Region::fillPredMass(const std::string& filename,
 
                 ptr2 = p_forfit->Fit(&f_p, "QRS", "", start1oPFit, end1oPFit);
                 bool converged = ptr2.Get() && ptr2->Status() == 0 && ptr2->Edm() < 1e-2;
-                bool chi2ok = ptr2.Get() && (ptr2->Ndf() < 4 || ptr2->Chi2()/ptr2->Ndf() < 7);
+                bool chi2ok = ptr2.Get() && (ptr2->Ndf() < 5 || ptr2->Chi2()/ptr2->Ndf() < 5);
                 bool goodFitP = converged && chi2ok;
+
+
                 statusFit = goodFitP ? 0 : 1;
 
+                incrFit_end = incrFit;
                 if (statusFit == 0) break;  // good fit, we keep it
             }
 
@@ -380,7 +383,7 @@ void Region::fillPredMass(const std::string& filename,
         }
 
 
-        if (statusFit != 0) {      // Bad fit
+        if (statusFit!=0 && useFit!=0) {      // Bad fit
             if (saveFits) { OutputHisto->cd(); p_forfit->Write(); }
             cout << "Bad fit 1/p in " << p_forfit->GetName() << " workerID=" << std::to_string(workerID)
                  << "    status=" << ptr2->Status()
@@ -388,8 +391,9 @@ void Region::fillPredMass(const std::string& filename,
                  << " isValid=" << ptr2->IsValid()
                  << " edm=" << ptr2->Edm()
                  << " chi2/ndf=" << ptr2->Chi2() << "/" << ptr2->Ndf()
-                 << " eta=" << eta->GetBinCenter(i) << endl;
-            cout << f_p.GetParameter(0) << " " << f_p.GetParameter(1) << " " << f_p.GetParameter(2) << " " << f_p.GetParameter(3) << endl;
+                 << " eta=" << eta->GetBinCenter(i)
+                 << " p-value=" << ptr2->Prob() << endl;
+            cout << " param: " << f_p.GetParameter(0) << " " << f_p.GetParameter(1) << " " << f_p.GetParameter(2) << " " << f_p.GetParameter(3) << endl;
             useFitP = false;
         }
         else {                              // Good fit
@@ -401,7 +405,7 @@ void Region::fillPredMass(const std::string& filename,
             intOneDimFP3 = new ROOT::Math::IntegratorOneDim(*f_p3, ROOT::Math::IntegrationOneDim::kGAUSS);
         }
         float dedx_temp = (useOldIhFit)? 3.5 : start_fit;
-        float mom_temp = 0.8*end1oPFit;
+        float mom_temp = 0.2*endFracs[incrFit_end] * peak;
 
         // ------------- If false: no fit -------------
 

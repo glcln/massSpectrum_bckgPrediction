@@ -28,6 +28,7 @@ TH2F* RebinTH2Y_varBins(TH2F* h, int nEta, double* eEta) {
         hNew = new TH2F(h->GetName(), h->GetTitle(),
                         nX, h->GetXaxis()->GetXmin(), h->GetXaxis()->GetXmax(),
                         nEta, eEta);
+    hNew->SetDirectory(nullptr);
 
     for (int ix = 1; ix <= nX; ix++)
         for (int iy = 1; iy <= h->GetNbinsY(); iy++) {
@@ -54,6 +55,7 @@ TH2F* RebinTH2X_varBins(TH2F* h, int nEta, double* eEta) {
         hNew = new TH2F(h->GetName(), h->GetTitle(),
                         nEta, eEta,
                         nY, h->GetYaxis()->GetXmin(), h->GetYaxis()->GetXmax());
+    hNew->SetDirectory(nullptr);
 
     for (int ix = 1; ix <= h->GetNbinsX(); ix++)
         for (int iy = 1; iy <= nY; iy++) {
@@ -86,6 +88,7 @@ TH2F* FoldAbsTH2X(TH2F* h, const std::string& newName) {
 
     TH2F* hf = new TH2F(newName.c_str(), h->GetTitle(),
                         nxPos, xedges.data(), ny, yedges.data());
+    hf->SetDirectory(nullptr);
     hf->Sumw2();
 
     for (int j = 1; j <= ny; ++j) {
@@ -116,6 +119,7 @@ TH2F* FoldAbsTH2Y(TH2F* h, const std::string& newName) {
 
     TH2F* hf = new TH2F(newName.c_str(), h->GetTitle(),
                         nx, xedges.data(), nyPos, yedges.data());
+    hf->SetDirectory(nullptr);
     hf->Sumw2();
 
     for (int j = 1; j <= ny; ++j) {
@@ -141,7 +145,11 @@ void loadHistograms(Region& r,
                     int rebinih = 1,
                     bool TakeAbsEta = false) {
 
-    cout << "loading region " << regionName << endl;
+    cout << "loading region " << regionName << "    rebineta=" << rebineta << ", rebinp=" << rebinp << ", rebinih=" << rebinih << endl;
+
+    if (rebinp==4) rebinp = 8;
+    if (rebinp==2) rebinp = 6;
+    if (rebinp==1) rebinp = 4;
 
     r.eta_p                = (TH2F*) f->Get(("eta_1oP_"+regionName).c_str())->Clone();
 
@@ -198,6 +206,10 @@ void loadHistograms(Region& r,
     if (bool_rebin) {
 
         r.ih_p->Rebin2D(rebinp,rebinih);
+        r.ih_p_cross1D->Rebin2D(rebinp,rebinih);
+        r.ih_p_cross1D_fit->Rebin2D(rebinp,rebinih);
+        r.ih_p_cross1D_corr->Rebin2D(rebinp,rebinih);
+        
         r.ias_p->Rebin2D(rebinp,rebinih);
         r.ias_pt->Rebin2D(rebinp,rebinih);
         r.mass_ih->Rebin2D(rebinih,1);
@@ -283,6 +295,8 @@ void loadHistograms(Region& r,
         tmp = FoldAbsTH2X(r.pred_mass_eta, ("pred_mass_eta_"+regionName+"_absEta").c_str());
         delete r.pred_mass_eta; r.pred_mass_eta = tmp;
     }
+
+    cout << "1/p bin width = " << r.eta_p->GetXaxis()->GetBinWidth(1) << " GeV" << endl;
 
     return;
 }
@@ -650,7 +664,7 @@ void bckgEstimate(const std::string& filename,
 
 
         // TEMPORARY
-        normalisationABC = bc.pred_mass->Integral();
+        //normalisationABC = bc.pred_mass->Integral();
         // TEMPORARY
         
 
@@ -714,10 +728,11 @@ void bckgEstimate(const std::string& filename,
 
     bc.pred_mass_eta->Write();
     bc.pred_mass_eta->ProjectionY()->Write();
-    d.mass_eta->Write();
-    d.mass_eta->ProjectionY()->Write();
-    c.mass_eta->Write();
-    c.mass_eta->ProjectionY()->Write();
+
+    d.mass_eta->SetName(("mass_eta_D_"+st).c_str());        d.mass_eta->Write();
+    d.mass_eta->ProjectionY(("mass_eta_D_"+st+"_py").c_str())->Write();
+    c.mass_eta->SetName(("mass_eta_C_"+st).c_str());        c.mass_eta->Write();
+    c.mass_eta->ProjectionY(("mass_eta_C_"+st+"_py").c_str())->Write();
 
     A.ih_eta->Write();
     A.eta_p->Write();
@@ -752,7 +767,7 @@ void bckgEstimate(const std::string& filename,
     c1->Write();
 
     // fill a new histo with norm/d.mass->integral:
-    TH1F* h_norm = new TH1F("h_norm", "h_norm", 400, 0.9, 1.1);
+    TH1F* h_norm = new TH1F("h_norm", "h_norm", 40, 0.9, 1.1);
     h_norm->GetXaxis()->SetTitle("BC/AD");
     h_norm->GetYaxis()->SetTitle("Entries");
     for(int i=0; i<normalisations.size(); i++) h_norm->Fill(normalisations[i]/d.mass->Integral());

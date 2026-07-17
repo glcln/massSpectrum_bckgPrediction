@@ -5,26 +5,26 @@ parser = OptionParser(usage="Usage: python %prog codeVersion")
 (opt,args) = parser.parse_args()
 
 datasetList = [
-    "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p31",
+    "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p32",
 ]
 
 nPE = "200"
 
 #[label, rebinEta, rebinIh, rebinMom, fitIh, fitMom, useFit, corrTemplateIh]
 config = [
-    ["nominal", "4", "4", "4", "1", "1", "1", "0"],
-    #["etaup", "2", "4", "4", "1", "1", "1", "0"],
-    #["etadown", "8", "4", "4", "1", "1", "1", "0"],
-    #["ihup", "4", "2", "4", "1", "1", "1", "0"],
-    #["ihdown", "4", "8", "4", "1", "1", "1", "0"],
-    #["momup", "4", "4", "2", "1", "1", "1", "0"],
-    #["momdown", "4", "4", "8", "1", "1", "1", "0"],
-    #["useFit", "4", "4", "4", "1", "1", "0", "0"],
-    #["FitIhUp", "4", "4", "4", "2", "1", "1", "0"],
-    #["FitIhDown", "4", "4", "4", "0", "1", "1", "0"],
-    #["FitMomUp", "4", "4", "4", "1", "2", "1", "0"],
-    #["FitMomDown", "4", "4", "4", "1", "0", "1", "0"],
-    #["corrTemplateIh", "4", "4", "4", "1", "1", "1", "1"],
+    ["nominal", "4", "4", "2", "1", "1", "1", "0"],
+    #["etaup", "2", "4", "2", "1", "1", "1", "0"],
+    #["etadown", "8", "4", "2", "1", "1", "1", "0"],
+    #["ihup", "4", "2", "2", "1", "1", "1", "0"],
+    #["ihdown", "4", "8", "2", "1", "1", "1", "0"],
+    #["momup", "4", "4", "1", "1", "1", "1", "0"],
+    #["momdown", "4", "4", "4", "1", "1", "1", "0"],
+    #["useFit", "4", "4", "2", "1", "1", "0", "0"],
+    #["FitIhUp", "4", "4", "2", "2", "1", "1", "0"],
+    #["FitIhDown", "4", "4", "2", "0", "1", "1", "0"],
+    #["FitMomUp", "4", "4", "2", "1", "2", "1", "0"],
+    #["FitMomDown", "4", "4", "2", "1", "0", "1", "0"],
+    #["corrTemplateIh", "4", "4", "2", "1", "1", "1", "1"],
 ]
 
 

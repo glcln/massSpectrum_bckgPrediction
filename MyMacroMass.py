@@ -22,8 +22,6 @@ tdrstyle.setTDRStyle()
 year = '2024'
 era = ''
 
-PlotSignal = False
-
 
 #----------------------------------------------------
 #                       Functions
@@ -300,9 +298,11 @@ def main(argv):
     odir = ''
     labelName = ''
     nominalOnly = True
+    eta = ''
+    isMC = False
 
     try:
-        opts, args = getopt.getopt(argv,"hi:o:r:d",["ifile=","labelName=","ofile=","region=","odir=", "nom="])
+        opts, args = getopt.getopt(argv,"hi:o:r:d",["ifile=","labelName=","ofile=","region=","odir=", "nom=", "eta=", "isMCsample="])
     except getopt.GetoptError:
         print ('test.py -i <inputfile> -e <labelName> -o <outputfile> -r <region> -d <odir> -n <nominalOnly>')
         sys.exit(2)
@@ -322,6 +322,10 @@ def main(argv):
             odir = arg
         elif opt in ("-n", "--nom"):
             nominalOnly = arg.lower() in ("true", "1", "yes")
+        elif opt in ("-a", "--eta"):
+            eta = arg
+        elif opt in ("-mc", "--isMCsample"):
+            isMC = arg.lower() in ("true", "1", "yes")
 
     os.system('mkdir -p ' + odir)
     outputfile = odir + '/' + outputfile
@@ -333,10 +337,10 @@ def main(argv):
     blind       = False
     isBinWidth  = False
     doRebin     = True
-    isData      = True
     labelRegion = region
-    signal      = False
-    option      = "_etaAbs_Ihcut_v2"#_chi2cut"
+    PlotSignal  = True
+    doYouWantRratio = True
+
 
 
     ifile = ROOT.TFile(inputfile)
@@ -344,13 +348,22 @@ def main(argv):
     obs = ifile.Get("mass_obs_" + region)
     pred = ifile.Get("mass_predBC_" + region)
     
-    if (region=="8fp9"): C_mass = ifile.Get("mass_regionD_8fp9_" + labelName)#C_mass = ifile.Get("mass_regionC_3fp8_" + labelName)
+    if (region=="8fp9"): C_mass = ifile.Get("mass_regionC_3fp8_" + labelName) #C_mass = ifile.Get("mass_regionD_8fp9_" + labelName)
     else: C_mass = ifile.Get("mass_obs_" + region)
     pred_noSyst = addSyst(pred,0.0)
 
 
-    ifileGl2000 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_10_6_30/src/HSCPTreeAnalyzer/output/Gluino2000_massCut_0_pT70_V5p0_Fpix_Eta2p4_Scale.root")
-    m_Gl2000 = ifileGl2000.Get("mass_regionD_"+region+"_METContainingMu")
+    ifileGl2400 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/Gluino_Run3_MET_madgraph_2400_V19p8_weighted.root")
+    m_Gl2400 = ifileGl2400.Get("METanalysis_TestPUppiMETCut_" + eta + "_" + region + "_SignalMass_nominal")
+    ifileGl2000 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/Gluino_Run3_MET_madgraph_2000_V19p8_weighted.root")
+    m_Gl2000 = ifileGl2000.Get("METanalysis_TestPUppiMETCut_" + eta + "_" + region + "_SignalMass_nominal")
+    ifileGl2600 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/Gluino_Run3_MET_madgraph_2600_V19p8_weighted.root")
+    m_Gl2600 = ifileGl2600.Get("METanalysis_TestPUppiMETCut_" + eta + "_" + region + "_SignalMass_nominal")
+
+    if (not m_Gl2400) or (not m_Gl2000) or (not m_Gl2600):
+        print("Error: one of the signal histograms is None. Check the input files and histogram names.")
+        sys.exit(1)
+
 
 
     # -------------- Work on histograms --------------
@@ -365,17 +378,21 @@ def main(argv):
         obs         = obs.Rebin(sizeRebinning,"obs_new",rebinning)
         C_mass      = C_mass.Rebin(sizeRebinning,"C_mass_new",rebinning)
 
-    normSignal = 1
+    normSignal = 1.
     if(year=="2024"):
         if (era=="F"): normSignal = 25.40/100
         elif (era=="G"): normSignal = 34.4/100
     
     if (PlotSignal):
+        m_Gl2400.Scale(normSignal)
         m_Gl2000.Scale(normSignal)
+        m_Gl2600.Scale(normSignal)
 
     if(doRebin==True):
         if (PlotSignal):
+            m_Gl2400 = m_Gl2400.Rebin(sizeRebinning,"Gl1400_new",rebinning)
             m_Gl2000 = m_Gl2000.Rebin(sizeRebinning,"Gl2000_new",rebinning)
+            m_Gl2600 = m_Gl2600.Rebin(sizeRebinning,"Gl2600_new",rebinning)
 
 
     pred_noCorrBias = pred.Clone()
@@ -419,7 +436,7 @@ def main(argv):
     err_pred_m300 = err_pred_m300.value
 
 
-    mass_fit=4000
+    mass_fit=300
     min_mass=0
     max_mass=4000
     if(doRebin==False):    
@@ -432,12 +449,21 @@ def main(argv):
 
 
     if (PlotSignal):
+        underflowAndOverflow(m_Gl2400, False, max_mass)
+        m_Gl2400 = setColorAndMarker(m_Gl2400, ROOT.kViolet+1, 21)
+        m_Gl2400.SetLineWidth(2)
+
         underflowAndOverflow(m_Gl2000, False, max_mass)
-        m_Gl2000 = setColorAndMarker(m_Gl2000, 28, 22)
+        m_Gl2000 = setColorAndMarker(m_Gl2000, ROOT.kOrange+8, 22)
+        m_Gl2000.SetLineWidth(2)
+
+        underflowAndOverflow(m_Gl2600, False, max_mass)
+        m_Gl2600 = setColorAndMarker(m_Gl2600, ROOT.kGreen-3, 23)
+        m_Gl2600.SetLineWidth(2)
 
 
     # Poisson errors for the observed distribution
-    obs = poissonning(obs)
+    if (not isMC): obs = poissonning(obs)
     
 
 
@@ -472,8 +498,8 @@ def main(argv):
     pull  = pullOfHisto(obs,pred,0.)
     pullC = pullOfHisto(C_mass,pred,0.)
 
-    ratioInt  = ratioIntegral(obs,    pred, 0., mass_fit)
-    ratioIntC = ratioIntegral(C_mass, pred, 0., mass_fit)
+    ratioInt  = ratioIntegral(obs,    pred, 0., max_mass)
+    ratioIntC = ratioIntegral(C_mass, pred, 0., max_mass)
 
     if(isBinWidth):
         obs = binWidth(obs)
@@ -481,7 +507,9 @@ def main(argv):
         C_mass = binWidth(C_mass)
         pred_noSyst = binWidth(pred_noSyst)
         if (PlotSignal):
+            m_Gl2400 = binWidth(m_Gl2400)
             m_Gl2000 = binWidth(m_Gl2000)
+            m_Gl2600 = binWidth(m_Gl2600)
 
     pred_band=pred.Clone()
     pred_band_noSyst=pred_noSyst.Clone()
@@ -513,34 +541,33 @@ def main(argv):
     t1.cd()
     t1.SetLogy(1)
     t1.SetTopMargin(0.003)
-    t1.SetBottomMargin(0.005)
+    t1.SetBottomMargin(0.03)
     c1.cd()
 
     t2=TPad("t2","t2", 0.0, 0.32, 0.95, 0.45)
     t2.Draw()
     t2.cd()
     t2.SetGridy(1)
-    t2.SetPad(0,0.32,0.95,0.45)
     t2.SetTopMargin(0.1)
-    t2.SetBottomMargin(0.02)
+    t2.SetBottomMargin(0.06)
     c1.cd()
     
-    t3=TPad("t3","t3", 0.0, 0.18, 0.95, 0.32)
+    t3=TPad("t3","t3", 0.0, 0.18, 0.95, 0.32) if doYouWantRratio else TPad("t3","t3", 0.0, 0.25, 0.95, 0.45)
     t3.Draw()
     t3.cd()
     t3.SetGridy(1)
-    t3.SetPad(0,0.18,0.95,0.32)
     t3.SetTopMargin(0.1)
-    t3.SetBottomMargin(0.02)
+    t3.SetBottomMargin(0.06)
     c1.cd()
 
-    t4=TPad("t4","t4", 0.0, 0.0, 0.95, 0.18)
+    t4=TPad("t4","t4", 0.0, 0.0, 0.95, 0.18) if doYouWantRratio else TPad("t4","t4", 0.0, 0.0, 0.95, 0.25)
     t4.Draw()
     t4.cd()
     t4.SetGridy(1)
-    t4.SetPad(0,0.0,0.95,0.18)
     t4.SetTopMargin(0.1)
-    t4.SetBottomMargin(0.3)
+    t4.SetBottomMargin(0.32)
+
+
     t1.cd()
 
     min_entries=pred.GetBinContent(pred.FindBin(max_mass)-1)/10
@@ -548,21 +575,21 @@ def main(argv):
         min_entries=1e-6
     max_entries=pred.GetMaximum()*100
 
-    #min_entries = 1e-4
-    #max_entries = 5e6
+    min_entries = 1e-2
+    max_entries = 2e5
 
     titleYaxis = "Events / bin"
     if (isBinWidth):
         titleYaxis = "Tracks / bin width"
     
 
-    pred_band.GetXaxis().SetTitle("Mass (GeV)")
+    pred_band.GetXaxis().SetTitle("")
     pred_band.GetYaxis().SetTitle(titleYaxis)
     pred_band.GetYaxis().SetLabelFont(43)
     pred_band.GetYaxis().SetLabelSize(20)
     pred_band.GetYaxis().SetTitleFont(43)
     pred_band.GetYaxis().SetTitleSize(20)
-    pred_band.GetYaxis().SetTitleOffset(2.)
+    pred_band.GetYaxis().SetTitleOffset(1.8)
 
     pred_band.SetMarkerStyle(22)
     pred_band.SetMarkerColor(5)
@@ -574,6 +601,7 @@ def main(argv):
     pred_band.GetXaxis().SetRangeUser(min_mass,max_mass)
     pred_band.GetYaxis().SetRangeUser(min_entries,max_entries)
     pred_band.GetXaxis().SetTitle("")
+    pred_band.GetXaxis().SetLabelSize(0)
     pred_band.Draw("same E5")
     pred_band.SaveAs(odir+'/predband.root')
 
@@ -621,27 +649,28 @@ def main(argv):
         obs_blind.SetLineColor(8)
         obs_blind.SetMarkerStyle(23)
     obs_blind.Draw("same E1")
-    if (region == "8fp9" and PlotSignal):
-        m_Gl2000.Draw("same E1")
+    if (PlotSignal):
+        m_Gl2400.Draw("same hist")
+        m_Gl2000.Draw("same hist")
+        m_Gl2600.Draw("same hist")
     if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
         C_mass_blind.Draw("same E1")
 
     obs_blind.SaveAs(odir+'/obs_blind.root')
     
-    if(signal==True):
-        m_Gl2000.Draw("same E1")
 
-    leg=TLegend(0.5,0.75,0.8,0.95)
+    leg=TLegend(0.6,0.5,1,1)
     leg.SetFillStyle(0)
     leg.SetBorderSize(0)
     leg.SetTextFont(43)
-    leg.SetTextSize(14)
-    if (labelRegion == "8fp9"): leg.SetHeader("CR : " + labelRegion)
+    leg.SetTextSize(16)
+    if (labelRegion == "8fp9"): leg.SetHeader("Validation Region: 0.8< F_{pixel}\leq0.9")
+    elif (labelRegion == "9fp10"): leg.SetHeader("Signal Region: 0.9< F_{pixel}\leq1.0")
     else: leg.SetHeader("Region : " + labelRegion)
 
-    tex1 = ROOT.TLatex(0.85, 0.96, "(13.6 TeV)")
+    tex1 = ROOT.TLatex(0.85, 0.96, "")
     if (year == "2024"):
-        tex1 = ROOT.TLatex(0.66, 0.96, "105.8 fb^{-1} (13.6 TeV)")
+        if (not isMC): tex1 = ROOT.TLatex(0.68, 0.96, "109 fb^{-1} (13.6 TeV)")
         if (era == "F"): tex1 = ROOT.TLatex(0.63, 0.96, "2024F - 25.40 fb^{-1} (13.6 TeV)")
         if (era == "G"): tex1 = ROOT.TLatex(0.63, 0.96, "2024G - 34.4 fb^{-1} (13.6 TeV)")
     tex1.SetNDC()
@@ -651,7 +680,9 @@ def main(argv):
     c1.cd()
     tex1.Draw()
 
-    tex2 = ROOT.TLatex(0.15, 0.96, "#scale[1.3]{#bf{CMS}}#it{Simulation Work in progress}")
+    #tex2 = ROOT.TLatex(0.15, 0.96, "#scale[1.3]{#bf{CMS}}#it{Work in progress}")
+    tex2 = ROOT.TLatex(0.15, 0.96, "#it{Private work (CMS data)}")
+    if (isMC): tex2 = ROOT.TLatex(0.15, 0.96, "#it{Private work (CMS simulation)}")
     tex2.SetNDC()
     tex2.SetTextFont(42)
     tex2.SetTextSize(0.03)
@@ -670,30 +701,29 @@ def main(argv):
     if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
         leg.AddEntry(C_mass_blind, "Observed in C", "PE1")
     
-    if(isData==True):
-        entry=leg.AddEntry(pred_leg,"Data-based pred.","PF")
-        entry.SetFillColor(5)
-        entry.SetFillStyle(1001)
-        entry.SetLineColor(5)
-        entry.SetLineStyle(1)
-        entry.SetLineWidth(1)
-        entry.SetMarkerColor(2)
-        entry.SetMarkerStyle(21)
-        entry.SetMarkerSize(1)
-        entry.SetTextFont(43)
+    entry=leg.AddEntry(pred_leg,"Data-based pred.","PF")
+    entry.SetFillColor(5)
+    entry.SetFillStyle(1001)
+    entry.SetLineColor(5)
+    entry.SetLineStyle(1)
+    entry.SetLineWidth(1)
+    entry.SetMarkerColor(2)
+    entry.SetMarkerStyle(21)
+    entry.SetMarkerSize(1)
+    entry.SetTextFont(43)
  
 
-    if (region == "8fp9" and PlotSignal):
-        leg.AddEntry(m_Gl2000,"#tilde{g} (M=2000 GeV)","PE1")
-    if(signal==True):
-        leg.AddEntry(m_Gl2000,"#tilde{g} (M=2000 GeV)","PE1")
+    if (PlotSignal):
+        leg.AddEntry(m_Gl2000,"#tilde{g} (M=2000 GeV)","l")
+        leg.AddEntry(m_Gl2400,"#tilde{g} (M=2400 GeV)","l")
+        leg.AddEntry(m_Gl2600,"#tilde{g} (M=2600 GeV)","l")
 
 
     LineLastBin=TLine(obs_blind.GetBinLowEdge(obs_blind.FindBin(max_mass)-1),0,obs_blind.GetBinLowEdge(obs_blind.FindBin(max_mass)-1),max_entries)
     LineLastBin.SetLineStyle(3)
     LineLastBin.SetLineColor(1)
 
-    LineFit1=TLine(mass_fit,0,mass_fit,max_entries)
+    LineFit1=TLine(mass_fit, min_entries, mass_fit, max_entries)
     LineFit1.SetLineStyle(1)
     LineFit1.SetLineColor(1)
     
@@ -701,67 +731,56 @@ def main(argv):
     if (blind): LineFit1.Draw("same")
     leg.Draw("same")
     
-    t=ROOT.TText(0.95,0.7,"+overflow")
-    t.SetNDC(True)
-    t.SetTextColor(1)
-    t.SetTextFont(43)
-    t.SetTextSize(24)
-    t.SetTextAngle(90)
-
-
-
-    c1.cd()
-    t2.cd()
-    
-    frameR=ROOT.TH1D("frameR", "frameR", 1,min_mass, max_mass)
-    frameR.GetXaxis().SetNdivisions(505)
-    frameR.SetTitle("")
-    frameR.SetStats(0)
-    frameR.GetXaxis().SetTitle("")
-    frameR.GetYaxis().SetTitle("RatioR  ")
-    frameR.SetMaximum(2.)
-    frameR.SetMinimum(0.0)
-    frameR.GetYaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
-    frameR.GetYaxis().SetLabelSize(12) #font size
-    frameR.GetYaxis().SetTitleFont(43) #give the font size in pixel (instead of fraction)
-    frameR.GetYaxis().SetTitleSize(14) #font size
-    frameR.GetYaxis().SetNdivisions(503)
-    frameR.GetXaxis().SetNdivisions(505)
-    frameR.GetXaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
-    frameR.GetXaxis().SetLabelSize(20) #font size
-    frameR.GetXaxis().SetTitleFont(43) #give the font size in pixel (instead of fraction)
-    frameR.GetXaxis().SetTitleSize(20) #font size
-    frameR.GetXaxis().SetTitleOffset(3.75)
-    frameR.Draw("AXIS")
-
-    ratioInt_blind.SetMarkerStyle(21)
-    ratioInt_blind.SetMarkerColor(1)
-    ratioInt_blind.SetMarkerSize(0.7)
-    ratioInt_blind.SetLineColor(1)
-    ratioInt_blind.SetFillColor(0)
-    ratioIntC_blind.SetMarkerStyle(23)
-    ratioIntC_blind.SetMarkerColor(8)
-    ratioIntC_blind.SetLineColor(8)
-    if (region=="3fp8"):
-        ratioInt_blind.SetMarkerColor(8)
-        ratioInt_blind.SetLineColor(8)
-        ratioInt_blind.SetMarkerStyle(23)
-    ratioInt_blind.Draw("same E0")
-    if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
-        ratioIntC_blind.Draw("same E0")
-
     LineAtOne=TLine(min_mass,1,max_mass,1)
     LineAtOne.SetLineStyle(3)
     LineAtOne.SetLineColor(1)
-    LineAtOne.Draw("same")
 
-    ratioInt_blind.GetXaxis().SetRange(min_mass,max_mass)
-    ratioInt_blind.GetXaxis().SetRangeUser(min_mass,max_mass)
+    if (doYouWantRratio):
+        c1.cd()
+        t2.cd()
+        
+        frameR=ROOT.TH1D("frameR", "frameR", 1,min_mass, max_mass)
+        frameR.GetXaxis().SetNdivisions(505)
+        frameR.SetTitle("")
+        frameR.SetStats(0)
+        frameR.GetXaxis().SetTitle("")
+        frameR.GetYaxis().SetTitle("RatioR ")
+        frameR.SetMaximum(2.)
+        frameR.SetMinimum(0.0)
+        frameR.GetYaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
+        frameR.GetYaxis().SetLabelSize(14) #font size
+        frameR.GetYaxis().SetTitleFont(43) #give the font size in pixel (instead of fraction)
+        frameR.GetYaxis().SetTitleSize(18) #font size
+        frameR.GetYaxis().SetNdivisions(503)
+        frameR.GetXaxis().SetLabelSize(0) #font size
+        frameR.GetXaxis().SetTitleOffset(3.75)
+        frameR.Draw("AXIS")
 
-    LineFit2 = TLine(mass_fit, 0, mass_fit, 2.)
-    LineFit2.SetLineStyle(1)
-    LineFit2.SetLineColor(1)
-    if (blind): LineFit2.Draw("same")
+        ratioInt_blind.SetMarkerStyle(21)
+        ratioInt_blind.SetMarkerColor(1)
+        ratioInt_blind.SetMarkerSize(0.7)
+        ratioInt_blind.SetLineColor(1)
+        ratioInt_blind.SetFillColor(0)
+        ratioIntC_blind.SetMarkerStyle(23)
+        ratioIntC_blind.SetMarkerColor(8)
+        ratioIntC_blind.SetLineColor(8)
+        if (region=="3fp8"):
+            ratioInt_blind.SetMarkerColor(8)
+            ratioInt_blind.SetLineColor(8)
+            ratioInt_blind.SetMarkerStyle(23)
+        ratioInt_blind.Draw("same E0")
+        if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
+            ratioIntC_blind.Draw("same E0")
+
+        LineAtOne.Draw("same")
+
+        ratioInt_blind.GetXaxis().SetRange(min_mass,max_mass)
+        ratioInt_blind.GetXaxis().SetRangeUser(min_mass,max_mass)
+
+        LineFit2 = TLine(mass_fit, 0, mass_fit, 2.)
+        LineFit2.SetLineStyle(1)
+        LineFit2.SetLineColor(1)
+        if (blind): LineFit2.Draw("same")
 
 
 
@@ -773,18 +792,14 @@ def main(argv):
     frameR2.SetTitle("")
     frameR2.SetStats(0)
     frameR2.GetXaxis().SetTitle("")
-    frameR2.GetYaxis().SetTitle("obs / pred ")
+    frameR2.GetYaxis().SetTitle("obs / pred") if doYouWantRratio else frameR2.GetYaxis().SetTitle("obs / pred ")
     frameR2.GetYaxis().SetRangeUser(0.,2.)
     frameR2.GetYaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
-    frameR2.GetYaxis().SetLabelSize(12) #font size
+    frameR2.GetYaxis().SetLabelSize(14) #font size
     frameR2.GetYaxis().SetTitleFont(43) #give the font size in pixel (instead of fraction)
-    frameR2.GetYaxis().SetTitleSize(14) #font size
+    frameR2.GetYaxis().SetTitleSize(18) #font size
     frameR2.GetYaxis().SetNdivisions(503)
-    frameR2.GetXaxis().SetNdivisions(505)
-    frameR2.GetXaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
-    frameR2.GetXaxis().SetLabelSize(20) #font size
-    frameR2.GetXaxis().SetTitleFont(43) #give the font size in pixel (instead of fraction)
-    frameR2.GetXaxis().SetTitleSize(20) #font size
+    frameR2.GetXaxis().SetLabelSize(0) #font size
     frameR2.GetXaxis().SetTitleOffset(3.75)
     frameR2.Draw("AXIS")
 
@@ -829,23 +844,22 @@ def main(argv):
     frameR3.GetXaxis().SetNdivisions(505)
     frameR3.SetTitle("")
     frameR3.SetStats(0)
-    frameR3.GetXaxis().SetTitle("")
     frameR3.GetXaxis().SetTitle("Mass (GeV)")
     frameR3.GetYaxis().SetTitleOffset(1.3)
-    frameR3.GetYaxis().SetTitle("#frac{Data-pred}{#sigma} ")
+    frameR3.GetYaxis().SetTitle("#frac{Data-pred}{#sigma}") if doYouWantRratio else frameR3.GetYaxis().SetTitle("#frac{Data-pred}{#sigma} ")
     frameR3.GetYaxis().SetTickLength(frameR3.GetYaxis().GetTickLength()*2)
     frameR3.SetMaximum(3)
     frameR3.SetMinimum(-3)
     frameR3.GetYaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
-    frameR3.GetYaxis().SetLabelSize(12) #font size
+    frameR3.GetYaxis().SetLabelSize(14) #font size
     frameR3.GetYaxis().SetTitleFont(43) #give the font size in pixel (instead of fraction)
-    frameR3.GetYaxis().SetTitleSize(14) #font size
+    frameR3.GetYaxis().SetTitleSize(18) #font size
     frameR3.GetYaxis().SetNdivisions(503)
     frameR3.GetXaxis().SetNdivisions(510)
     frameR3.GetXaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
-    frameR3.GetXaxis().SetLabelSize(14) #font size
+    frameR3.GetXaxis().SetLabelSize(16) #font size
     frameR3.GetXaxis().SetTitleFont(43) #give the font size in pixel (instead of fraction)
-    frameR3.GetXaxis().SetTitleSize(15) #font size
+    frameR3.GetXaxis().SetTitleSize(19) #font size
     frameR3.GetXaxis().SetTitleOffset(.85)
     frameR3.Draw("AXIS")
 
@@ -897,9 +911,9 @@ def main(argv):
 
     
     c1.Update()
-    c1.SaveAs(outputfile + "_region" + region + "_" + year + "_" + ("onlyNominal" if nominalOnly else "") + ".pdf")
-    c1.SaveAs(outputfile + "_region" + region + "_" + year + "_" + ("onlyNominal" if nominalOnly else "") + ".root")
-    c1.SaveAs(outputfile + "_region" + region + "_" + year + "_" + ("onlyNominal" if nominalOnly else "") + ".C")
+    c1.SaveAs(outputfile + "_region" + region + "_" + year + "_" + ("onlyNominal" if nominalOnly else "") + ("_wRatioR" if doYouWantRratio else "") + ("_MC" if isMC else "") + "_" + eta + ".pdf")
+    c1.SaveAs(outputfile + "_region" + region + "_" + year + "_" + ("onlyNominal" if nominalOnly else "") + ("_wRatioR" if doYouWantRratio else "") + ("_MC" if isMC else "") + "_" + eta + ".root")
+    c1.SaveAs(outputfile + "_region" + region + "_" + year + "_" + ("onlyNominal" if nominalOnly else "") + ("_wRatioR" if doYouWantRratio else "") + ("_MC" if isMC else "") + "_" + eta + ".C")
 
     print("   Saved in: {}".format(odir))
     print('')

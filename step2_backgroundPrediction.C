@@ -36,11 +36,23 @@ void step2_backgroundPrediction() {
 
     std::string st_sample = "data2024";
 
-    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1";
+    std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1";
     //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4";
-    std::string Ext = "_METanalysis_TestPUppiMETCut_Eta2p4";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta2p4";
     //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1p2_2p2";
     //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1p2_2p4";
+    
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_IhC";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p1";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p2";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p3";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p4";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p5";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p6";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p7";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p8";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p9";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih4p0";
     
     std::string etaName = "";
     if (Ext == "_METanalysis_TestPUppiMETCut_Eta1") etaName = "_Eta1";
@@ -48,6 +60,18 @@ void step2_backgroundPrediction() {
     else if (Ext == "_METanalysis_TestPUppiMETCut_Eta2p4") etaName += "_Eta2p4";
     else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1p2_2p2") etaName += "_Eta1p2_2p2";
     else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1p2_2p4") etaName += "_Eta1p2_2p4";
+
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_IhC") etaName += "_Eta1p2_2p4_IhC";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p1") etaName += "_Eta1p2_2p4_Ih3p1";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p2") etaName += "_Eta1p2_2p4_Ih3p2";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p3") etaName += "_Eta1p2_2p4_Ih3p3";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p4") etaName += "_Eta1p2_2p4_Ih3p4";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p5") etaName += "_Eta1p2_2p4_Ih3p5";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p6") etaName += "_Eta1p2_2p4_Ih3p6";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p7") etaName += "_Eta1p2_2p4_Ih3p7";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p8") etaName += "_Eta1p2_2p4_Ih3p8";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p9") etaName += "_Eta1p2_2p4_Ih3p9";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih4p0") etaName += "_Eta1p2_2p4_Ih4p0";
     outfilename_ += etaName;
 
 
@@ -56,7 +80,7 @@ void step2_backgroundPrediction() {
     bool useOldIhFit = false, useOld1oPFit = true;
     bool saveFits = true;
     std::string DataSetName = filename.substr(filename.find_last_of('/') + 1);
-    bool TakeAbsEta = true;
+    bool TakeAbsEta = false;
     cout << "valeur absolue de eta: " << TakeAbsEta << endl;
     
     cout << "Use fit: " << useFit << endl;
@@ -133,18 +157,18 @@ void step2_backgroundPrediction() {
 
         // In 8fp9
     blind = false;
-    // bckgEstimate(DataSetName, st_sample, rc_3fp8, rc_3fp8, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
-    //              "8fp9", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
-    //              MyIhCut, blind);
-
-    // Debug by taking templates in D
-    bckgEstimate(DataSetName, st_sample, rd_8fp9, rd_8fp9, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
+    bckgEstimate(DataSetName, st_sample, rc_3fp8, rc_3fp8, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
                  "8fp9", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
                  MyIhCut, blind);
 
+    // Debug by taking templates in D
+    // bckgEstimate(DataSetName, st_sample, rd_8fp9, rd_8fp9, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
+    //              "8fp9", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
+    //              MyIhCut, blind);
+
 
         // In 9fp10 with A and C in 3fp9
-    blind = true;
+    // blind = true;
     // bckgEstimate(DataSetName, st_sample, rc_3fp9, rc_3fp9, rbc_9fp10, ra_3fp9, rd_9fp10, ifIhpSAME, rb_9fp10,
     //              "9fp10", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
     //              MyIhCut, blind);

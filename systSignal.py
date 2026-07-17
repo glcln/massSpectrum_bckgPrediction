@@ -127,12 +127,12 @@ def plotter(predNominal, predPullD, predPullU, legNom, leg1, leg2, outDir, outTi
     t1.cd()
     c1.SetLogy(1)
 
-    max_mass=4000
+    max_mass = 4000
     min_entries=5e-2
     max_entries=predNominal.GetMaximum()*2
 
     predNominal = setColorAndMarker(predNominal,1,20)
-    predNominal.GetXaxis().SetRangeUser(0,max_mass)
+    predNominal.GetXaxis().SetRangeUser(0,predNominal.GetNbinsX())
     predNominal.GetYaxis().SetRangeUser(min_entries, max_entries)
     predNominal.SetMinimum(min_entries)
     #predNominal.SetMaximum(max_entries)
@@ -173,7 +173,7 @@ def plotter(predNominal, predPullD, predPullU, legNom, leg1, leg2, outDir, outTi
     frameR2.SetStats(0)
     frameR2.GetXaxis().SetTitle("")
     frameR2.GetYaxis().SetTitle("RatioR ")
-    frameR2.GetXaxis().SetRangeUser(0,max_mass)
+    frameR2.GetXaxis().SetRangeUser(0,predNominal.GetNbinsX())
     frameR2.SetMaximum(1.1)
     frameR2.SetMinimum(0.9)
     if(outTitle=="plot_PU"):
@@ -212,7 +212,7 @@ def plotter(predNominal, predPullD, predPullU, legNom, leg1, leg2, outDir, outTi
     frameR3.GetXaxis().SetLabelSize(20) #font size
     frameR3.GetYaxis().SetTitleOffset(2.1)
     frameR3.GetYaxis().SetTitle("#frac{Nominal}{var}")
-    frameR3.GetXaxis().SetRangeUser(0,max_mass)
+    frameR3.GetXaxis().SetRangeUser(0,predNominal.GetNbinsX())
     frameR3.Draw("AXIS")
     frameR3.GetXaxis().SetTitle("Mass (GeV)")
     frameR3.GetXaxis().SetTitleOffset(1)
@@ -244,20 +244,25 @@ def plotSummary(syst_K,
                 syst_PU,
                 syst_Fpix,
                 syst_trigger,
+                sys_Jet,
                 sysTot,
                 xtitle,
                 outTitle,
-                outDir):
+                outDir,
+                eta):
 
     syst_K = lowEdge(syst_K)
     syst_C = lowEdge(syst_C)
     syst_PU = lowEdge(syst_PU)
     syst_Fpix = lowEdge(syst_Fpix)
     syst_trigger = lowEdge(syst_trigger)
+    sys_Jet = lowEdge(sys_Jet)
 
     sysTot = lowEdge(sysTot)
 
-    c2=TCanvas()
+    c2=TCanvas("c2","c2",800,600)
+    c2.SetBottomMargin(0.1)
+    c2.SetLeftMargin(0.1)
 
     c2.SetLogy()
     c2.SetGrid()
@@ -267,17 +272,26 @@ def plotSummary(syst_K,
     syst_K.GetYaxis().SetTitle("Systematic Uncertainty [%]")
     syst_K.GetXaxis().SetNdivisions(510)
     syst_K.GetXaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
-    syst_K.GetXaxis().SetLabelSize(16) #font size
-    syst_K.GetXaxis().SetTitleSize(0.04) #font size
+    syst_K.GetXaxis().SetLabelSize(22) #font size
+    syst_K.GetXaxis().SetTitleSize(0.05) #font size
     syst_K.GetYaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
-    syst_K.GetYaxis().SetLabelSize(16) #font size
-    syst_K.GetYaxis().SetTitleSize(0.04) #font size
+    syst_K.GetYaxis().SetLabelSize(22) #font size
+    syst_K.GetYaxis().SetTitleSize(0.05) #font size
+    syst_K.GetYaxis().SetTitleOffset(1.0)
+    syst_K.GetXaxis().SetTitleOffset(1.0)
 
     # draw latex CMS preliminary
-    latex = TLatex(0.16, 0.96, "#scale[1.3]{#bf{CMS}}#it{Simulation Work in progress}")
+    #latex = TLatex(0.10, 0.96, "#scale[1.3]{#bf{CMS}}#it{Simulation Work in progress}")
+    latex = TLatex(0.10, 0.96, "#scale[1.3]{#it{Private work (CMS simulation)}}")
     latex.SetNDC()
     latex.SetTextFont(42)
     latex.SetTextSize(0.04)
+
+    mass = outTitle.split("_")[1]
+    tex = TLatex(0.73, 0.96, "#scale[1.3]{#bf{m_{#tilde{g}}=" + mass + " GeV}}")
+    tex.SetNDC()
+    tex.SetTextFont(42)
+    tex.SetTextSize(0.04)
 
     syst_K.GetXaxis().SetRangeUser(0,4000)
     syst_K.SetMinimum(1)
@@ -288,16 +302,19 @@ def plotSummary(syst_K,
     syst_PU = setColorAndMarker(syst_PU,46,23)
     syst_Fpix = setColorAndMarker(syst_Fpix,43,43)
     syst_trigger = setColorAndMarker(syst_trigger,40,39)
+    sys_Jet = setColorAndMarker(sys_Jet,41,42)
 
     sysTot = setColorAndMarker(sysTot,28,34)
 
-    leg2 = TLegend(0.27,0.7,0.5,0.93)
+    leg2 = TLegend(0.12,0.75,0.5,0.93)
+    leg2.SetNColumns(2)
     leg2.AddEntry(sysTot,"Total","PE1")
     leg2.AddEntry(syst_K,"K","PE1")
     leg2.AddEntry(syst_C,"C","PE1")
     leg2.AddEntry(syst_PU,"PU","PE1")
     leg2.AddEntry(syst_Fpix,"F^{pixel}","PE1")
     leg2.AddEntry(syst_trigger,"Trigger","PE1")
+    leg2.AddEntry(sys_Jet,"Jet","PE1")
 
     syst_K.Draw("AP")
     leg2.Draw("same")
@@ -305,21 +322,81 @@ def plotSummary(syst_K,
     syst_PU.Draw("P")
     syst_Fpix.Draw("P")
     syst_trigger.Draw("P")
+    sys_Jet.Draw("P")
     sysTot.Draw("P")
 
     latex.Draw()
+    tex.Draw()
+    c2.Update()
 
-    c2.SaveAs(outDir + "summary_" + outTitle + ".pdf")
-    c2.SaveAs(outDir + "summary_" + outTitle + ".C")
-    c2.SaveAs(outDir + "summary_" + outTitle + ".root")
+    c2.SaveAs(outDir + "summary_" + outTitle + "_" + eta + ".pdf")
 
+def plotTotalAllMasses(dict_sysTot, xtitle, outDir, eta, outTitle="sysTot_allMasses"):
 
+    c3 = TCanvas("c3", "c3", 800, 600)
+    c3.SetBottomMargin(0.1)
+    c3.SetLeftMargin(0.1)
+    c3.SetLogy()
+    c3.SetGrid()
+
+    colorMap = {
+        "2000": ROOT.kOrange + 8,
+        "2400": ROOT.kViolet + 1,
+        "2600": ROOT.kGreen - 3,
+    }
+    markers = [23, 21, 22]
+
+    leg3 = TLegend(0.6, 0.75, 0.93, 0.93)
+    leg3.SetBorderSize(0)
+
+    graphs = []  # keep references alive
+    first = True
+
+    for i, (mass, h) in enumerate(sorted(dict_sysTot.items(), key=lambda x: int(x[0]))):
+        if mass not in colorMap:
+            continue
+        g = lowEdge(h)
+        g = setColorAndMarker(g, colorMap[mass], markers[i % len(markers)])
+        graphs.append(g)
+        leg3.AddEntry(g, "m_{#tilde{g}}=" + mass + " GeV", "PE1")
+        g.SetMarkerSize(1.2)
+
+        if first:
+            g.SetMinimum(1)
+            g.SetMaximum(2000)
+            g.GetXaxis().SetRangeUser(0, 4000)
+            g.GetXaxis().SetTitle(xtitle)
+            g.GetYaxis().SetTitle("Total Systematic Uncertainty [%]")
+            g.GetXaxis().SetNdivisions(510)
+            g.GetXaxis().SetLabelFont(43)
+            g.GetXaxis().SetLabelSize(22)
+            g.GetXaxis().SetTitleSize(0.05)
+            g.GetXaxis().SetTitleOffset(1.0)
+            g.GetYaxis().SetLabelFont(43)
+            g.GetYaxis().SetLabelSize(22)
+            g.GetYaxis().SetTitleSize(0.05)
+            g.GetYaxis().SetTitleOffset(1.0)
+            g.Draw("AP")
+            first = False
+        else:
+            g.Draw("P")
+
+    leg3.Draw("same")
+
+    latex = TLatex(0.10, 0.96, "#scale[1.3]{#it{Private work (CMS simulation)}}")
+    latex.SetNDC()
+    latex.SetTextFont(42)
+    latex.SetTextSize(0.04)
+    latex.Draw()
+
+    c3.Update()
+    c3.SaveAs(outDir + outTitle + "_" + eta + ".pdf")
     
 
 
 # ---------------- MAIN ----------------
 
-codeVersion = "19p3"
+codeVersion = "19p8"
 
 SignalSamples = [
     "Gluino_Run3_MET_madgraph_1100_V" + codeVersion + ".root",
@@ -350,11 +427,13 @@ sampleName = {
 
 idir = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/"
 RegS = "9fp10"
-etaS = "Eta2p4"
-hname = "METanalysis_PseudoMETrescaled_" + etaS + "_" + RegS + "_SignalMass"
+etaS = "Eta1"
+hname = "METanalysis_TestPUppiMETCut_" + etaS + "_" + RegS + "_SignalMass"
 
 rebinning = array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
 sizeRebinning = len(rebinning) - 1
+
+sysTot_allMasses = {}
 
 for sample in SignalSamples:
 
@@ -372,6 +451,8 @@ for sample in SignalSamples:
     mass_Fpix_down = ifile.Get(hname + "_FpixDown")
     mass_Trigger_up = ifile.Get(hname + "_TriggerSFUp")
     mass_Trigger_down = ifile.Get(hname + "_TriggerSFDown")
+    mass_Jet_up = ifile.Get(hname + "_JetUp")
+    mass_Jet_down = ifile.Get(hname + "_JetDown")
     mass_K_up = ifile.Get(hname + "_KUp")
     mass_K_down = ifile.Get(hname + "_KDown")
     mass_C_up = ifile.Get(hname + "_CUp")
@@ -385,6 +466,8 @@ for sample in SignalSamples:
     mass_Fpix_down = allSet(mass_Fpix_down, sizeRebinning, rebinning, "Fpix_down")
     mass_Trigger_up = allSet(mass_Trigger_up, sizeRebinning, rebinning, "Trigger_up")
     mass_Trigger_down = allSet(mass_Trigger_down, sizeRebinning, rebinning, "Trigger_down")
+    mass_Jet_up = allSet(mass_Jet_up, sizeRebinning, rebinning, "Jet_up")
+    mass_Jet_down = allSet(mass_Jet_down, sizeRebinning, rebinning, "Jet_down")
     mass_K_up = allSet(mass_K_up, sizeRebinning, rebinning, "K_up")
     mass_K_down = allSet(mass_K_down, sizeRebinning, rebinning, "K_down")
     mass_C_up = allSet(mass_C_up, sizeRebinning, rebinning, "C_up")
@@ -395,6 +478,7 @@ for sample in SignalSamples:
     syst_PU_binned = systMass(mass_nominal, mass_PU_down, mass_PU_up, "", 0, 1)
     syst_Fpix_binned = systMass(mass_nominal, mass_Fpix_down, mass_Fpix_up, "", 0, 1)
     syst_Trigger_binned = systMass(mass_nominal, mass_Trigger_down, mass_Trigger_up, "", 0, 1)
+    syst_Jet_binned = systMass(mass_nominal, mass_Jet_down, mass_Jet_up, "", 0, 1)
     syst_K_binned = systMass(mass_nominal, mass_K_down, mass_K_up, "", 0, 1)
     syst_C_binned = systMass(mass_nominal, mass_C_down, mass_C_up, "", 0, 1)
     
@@ -404,10 +488,30 @@ for sample in SignalSamples:
     ofile.cd()
     sysTot_binned.Write()
 
+    mass_point = sampleName.get(sample).split("_")[1]
+    if mass_point in ["2000", "2400", "2600"]:
+        h_tot = sysTot_binned.Clone("sysTot_" + mass_point)
+        h_tot.SetDirectory(0)
+        sysTot_allMasses[mass_point] = h_tot
+
     plotter(mass_nominal, mass_PU_down, mass_PU_up, "Nominal", "Down", "Up", odir, "plot_PU")
     plotter(mass_nominal, mass_Fpix_down, mass_Fpix_up, "Nominal", "Down", "Up", odir, "plot_Fpix")
     plotter(mass_nominal, mass_Trigger_down, mass_Trigger_up, "Nominal", "Down", "Up", odir, "plot_Trigger")
+    plotter(mass_nominal, mass_Jet_down, mass_Jet_up, "Nominal", "Down", "Up", odir, "plot_Jet")
     plotter(mass_nominal, mass_K_down, mass_K_up, "Nominal", "Down", "Up", odir, "plot_K")
     plotter(mass_nominal, mass_C_down, mass_C_up, "Nominal", "Down", "Up", odir, "plot_C")
     
-    plotSummary(syst_K_binned, syst_C_binned, syst_PU_binned, syst_Fpix_binned, syst_Trigger_binned, sysTot_binned, "Mass bin", sampleName.get(sample), odir)
+    plotSummary(syst_K_binned,
+                syst_C_binned,
+                syst_PU_binned,
+                syst_Fpix_binned,
+                syst_Trigger_binned,
+                syst_Jet_binned,
+                sysTot_binned,
+                "Mass bin",
+                sampleName.get(sample),
+                odir,
+                etaS)
+    
+odirTot = "systSignal/"
+plotTotalAllMasses(sysTot_allMasses, "Mass (GeV)", odirTot, etaS)
