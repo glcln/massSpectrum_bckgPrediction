@@ -5,6 +5,11 @@
 #include "TDirectory.h"
 #include <TRatioPlot.h>
 #include <THStack.h>
+#include "TF1.h"
+#include "TFitResult.h"
+#include "Math/Integrator.h"
+#include "Math/IntegratorOptions.h"
+#include "Math/WrappedTF1.h"  
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
 using namespace std::placeholders;
@@ -18,6 +23,7 @@ float K_data2024 = 2.8202, C_data2024 = 2.9784;
 
 float K_mc2017 = 2.48, C_mc2017 = 3.19;
 float K_mc2018 = 2.49, C_mc2018 = 3.19;
+float K_mc2024 = 2.83894, C_mc2024 = 3.01756;
 
 //Systematic error due to the background estimate method
 float systErr_ = 0.; //set to 0 for systematic studies
@@ -31,15 +37,42 @@ void scale(TH1F* h) {
 }
 
 
-void corrIh(TH2F* ih_eta) {
+void corrIh(TH2F* ih_eta, const std::string& etaName) {
     TF1 f_correlation_Ih_Fpix("f_correlation_Ih_Fpix","pol1",2,10);
-    f_correlation_Ih_Fpix.SetParameter(0, 1.15515);
-    f_correlation_Ih_Fpix.SetParameter(1, -0.0464627);
+
+    float par0 = 1.03878, par1 = -0.0120062;
+    if (etaName.find("Eta2p4") != std::string::npos) {par0 = 1.03878 ; par1 = -0.0120062;}
+    else if (etaName.find("Eta1_2p4") != std::string::npos) {par0 = 1.12024 ; par1 = -0.03684;}
+    else if (etaName.find("Eta1") != std::string::npos) {par0 = 1.15082 ; par1 = -0.0459028;}
+
+    f_correlation_Ih_Fpix.SetParameter(0, par0);
+    f_correlation_Ih_Fpix.SetParameter(1, par1);
 
     for(int bin_eta=0; bin_eta<ih_eta->GetNbinsX(); bin_eta++){
         for(int bin_ih=0; bin_ih<ih_eta->GetNbinsY(); bin_ih++){
-            ih_eta->SetBinContent(bin_eta, bin_ih, 
+            ih_eta->SetBinContent(bin_eta,
+                                  bin_ih, 
                                   ih_eta->GetBinContent(bin_eta, bin_ih) / f_correlation_Ih_Fpix.Eval(ih_eta->GetYaxis()->GetBinCenter(bin_ih)));
+        }
+    }
+}
+
+void corr1oP(TH2F* eta_p, const std::string& etaName) {
+    TF1 f_correlation_1oP_Fpix("f_correlation_1oP_Fpix","pol1",0,200);
+
+    float par0 = 0.871848, par1 = 0.0020839;
+    if (etaName.find("Eta2p4") != std::string::npos) {par0 = 0.871848 ; par1 = 0.0020839;}
+    else if (etaName.find("Eta1_2p4") != std::string::npos) {par0 = 0.926461 ; par1 = 0.0019605;}
+    else if (etaName.find("Eta1") != std::string::npos) {par0 = 0.938621 ; par1 = 0.000665965;}
+
+    f_correlation_1oP_Fpix.SetParameter(0, par0);
+    f_correlation_1oP_Fpix.SetParameter(1, par1);
+
+    for(int bin_eta=0; bin_eta<eta_p->GetNbinsY(); bin_eta++){
+        for(int bin_1oP=0; bin_1oP<eta_p->GetNbinsX(); bin_1oP++){
+            eta_p->SetBinContent(bin_1oP,
+                                 bin_eta, 
+                                 eta_p->GetBinContent(bin_1oP, bin_eta) / f_correlation_1oP_Fpix.Eval(eta_p->GetXaxis()->GetBinCenter(bin_1oP)));
         }
     }
 }
@@ -132,7 +165,6 @@ class Region{
         TH2F* pt_pterroverpt;
         TH2F* ih_p_cross1D;
         TH2F* ih_p_cross1D_fit;
-        TH2F* ih_p_cross1D_corr;
 };
 
 
@@ -176,7 +208,6 @@ void Region::initHisto(TFileDirectory &dir, int etabins, int ihbins, int pbins, 
     ih_p = dir.make<TH2F>(("ih_p"+suffix).c_str(),";p [GeV];I_{h} [MeV/cm]",np,plow,pup,nih,ihlow,ihup);
     ih_p_cross1D = dir.make<TH2F>(("ih_p_cross1D"+suffix).c_str(),";p [GeV];I_{h} [MeV/cm]",np,plow,pup,nih,ihlow,ihup);
     ih_p_cross1D_fit = dir.make<TH2F>(("ih_p_cross1D_fit"+suffix).c_str(),";p [GeV];I_{h} [MeV/cm]",np,plow,pup,nih,ihlow,ihup);
-    ih_p_cross1D_corr = dir.make<TH2F>(("ih_p_cross1D_corr"+suffix).c_str(),";p [GeV];I_{h} [MeV/cm]",np,plow,pup,nih,ihlow,ihup);
     ias_p = dir.make<TH2F>(("ias_p"+suffix).c_str(),";p [GeV];I_{as}",np,plow,pup,nias,iaslow,iasup); 
     ias_pt = dir.make<TH2F>(("ias_pt"+suffix).c_str(),";pt [GeV];I_{as}",npt,ptlow,ptup,nias,iaslow,iasup);
     mass = dir.make<TH1F>(("mass"+suffix).c_str(),";Mass [GeV]",nmass,masslow,massup); 
@@ -210,18 +241,18 @@ void Region::fillPredMass(const std::string& filename,
                           TF1& f_p,
                           TF1& f_ih,
                           const bool useFit,
-                          const int& fit_ih_err = 1,
-                          const int& fit_p_err = 1,
-                          float weight_ = -1,
-                          bool useOldIhFit = false,
-                          bool useOld1oPFit = false,
-                          const std::string& etaName = "",
-                          bool saveFits = false,
-                          const int rebinp = 1,
-                          const float MyIhCut = C_data2024,
-                          const double par_p2 = 4.70839,
-                          const double par_p3 = 1.05005,
-                          const UInt_t workerID = 0) {
+                          const int& fit_ih_err,
+                          const int& fit_p_err,
+                          float weight_,
+                          bool useOldIhFit,
+                          bool useOld1oPFit,
+                          const std::string& etaName,
+                          bool saveFits,
+                          const int rebinp,
+                          const float MyIhCut,
+                          const double par_p2,
+                          const double par_p3,
+                          const UInt_t workerID) {
 
     // Debug Fit
     TFile* OutputHisto = nullptr;
@@ -236,11 +267,12 @@ void Region::fillPredMass(const std::string& filename,
     TH1F* eta = (TH1F*) ih_eta->ProjectionX();
 
     float K = 2.27, C = 3.16;
-    if(st_sample=="data2017"){K = K_data2017; C = C_data2017;}
-    else if(st_sample=="data2018"){K = K_data2018; C = C_data2018;}
+    if (st_sample=="data2017"){K = K_data2017; C = C_data2017;}
+    else if (st_sample=="data2018"){K = K_data2018; C = C_data2018;}
     else if (st_sample=="data2024"){K = K_data2024; C = C_data2024;}
-    else if(st_sample=="mc2017"){K = K_mc2017; C = C_mc2017;}
-    else if(st_sample=="mc2018"){K = K_mc2018; C = C_mc2018;}
+    else if (st_sample=="mc2017"){K = K_mc2017; C = C_mc2017;}
+    else if (st_sample=="mc2018"){K = K_mc2018; C = C_mc2018;}
+    else if (st_sample=="mc2024"){K = K_mc2024; C = C_mc2024;}
 
     bool useFitIh = true;
     bool useFitP = true;

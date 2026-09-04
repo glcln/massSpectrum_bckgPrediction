@@ -144,6 +144,7 @@ def setColorAndMarker(h1,color,markerstyle):
     h1.SetMarkerColor(color)
     h1.SetFillColor(color)
     h1.SetMarkerStyle(markerstyle)
+    h1.SetMarkerSize(1.2)
     return h1
 
 def lowEdge(h1):
@@ -296,9 +297,11 @@ def plotSummary(syst_stat,
                 syst_fitP,
                 syst_nofit,
                 syst_corrIh,
+                syst_corr1oP,
                 sysTot,
                 xtitle,
-                outTitle):
+                outTitle,
+                etaname):
     
     syst_stat = lowEdge(syst_stat)
     syst_eta = lowEdge(syst_eta)
@@ -307,11 +310,12 @@ def plotSummary(syst_stat,
     syst_fitP = lowEdge(syst_fitP)
     syst_nofit = lowEdge(syst_nofit)
     syst_corrIh = lowEdge(syst_corrIh)
+    syst_corr1oP = lowEdge(syst_corr1oP)
     syst_fitDeDx = lowEdge(syst_fitDeDx)
     sysTot = lowEdge(sysTot)
 
-    c2=TCanvas()
-    c2.SetBottomMargin(0.1)
+    c2=TCanvas("c2","c2",800,600)
+    c2.SetBottomMargin(0.12)
     c2.SetLeftMargin(0.1)
 
     c2.SetLogy()
@@ -322,10 +326,10 @@ def plotSummary(syst_stat,
     syst_stat.GetYaxis().SetTitle("Systematic Uncertainty [%]")
     syst_stat.GetXaxis().SetNdivisions(510)
     syst_stat.GetXaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
-    syst_stat.GetXaxis().SetLabelSize(20) #font size
+    syst_stat.GetXaxis().SetLabelSize(24) #font size
     syst_stat.GetXaxis().SetTitleSize(0.05) #font size
     syst_stat.GetYaxis().SetLabelFont(43) #give the font size in pixel (instead of fraction)
-    syst_stat.GetYaxis().SetLabelSize(20) #font size
+    syst_stat.GetYaxis().SetLabelSize(24) #font size
     syst_stat.GetYaxis().SetTitleSize(0.05) #font size
     syst_stat.GetYaxis().SetTitleOffset(1.0)
     syst_stat.GetXaxis().SetTitleOffset(1.0)
@@ -338,24 +342,34 @@ def plotSummary(syst_stat,
     latex.SetTextFont(42)
     latex.SetTextSize(0.04)
 
-    latex2 = TLatex(0.74, 0.96, "109 fb^{-1} (13.6 TeV)")
+    latex2 = TLatex(0.735, 0.96, "109 fb^{-1} (13.6 TeV)")
     latex2.SetNDC()
     latex2.SetTextFont(42)
     latex2.SetTextSize(0.04)
 
+    latex3 = TLatex(0.8, 0.88, "#bf{|#eta|<1}")
+    if (etaname=='Eta1_2p4'): latex3 = TLatex(0.75, 0.88, "#bf{1#leq|#eta|<2.4}")
+    if (etaname=='Eta2p4'): latex3 = TLatex(0.8, 0.88, "#bf{|#eta|<2.4}")
+    latex3.SetNDC()
+    latex3.SetTextFont(42)
+    latex3.SetTextSize(0.07)
+
     syst_stat.GetXaxis().SetRangeUser(0,4000)
-    syst_stat.SetMinimum(1)
+    syst_stat.SetMinimum(0.1)
     syst_stat.SetMaximum(2000)
 
+
     syst_stat = setColorAndMarker(syst_stat,1,20)
-    syst_eta = setColorAndMarker(syst_eta,30,21)
-    syst_ih = setColorAndMarker(syst_ih,38,22)
-    syst_p = setColorAndMarker(syst_p,46,23)
-    syst_fitP = setColorAndMarker(syst_fitP,47,47)
-    syst_nofit = setColorAndMarker(syst_nofit,41,48)
-    syst_corrIh = setColorAndMarker(syst_corrIh,13,49)
-    syst_fitDeDx = setColorAndMarker(syst_fitDeDx,39,29)
-    sysTot = setColorAndMarker(sysTot,28,34)
+    syst_eta = setColorAndMarker(syst_eta, ROOT.kMagenta-9, 21)
+    syst_ih = setColorAndMarker(syst_ih, ROOT.kViolet+1, 22)
+    syst_p = setColorAndMarker(syst_p, ROOT.kBlue+1, 23)
+    syst_fitP = setColorAndMarker(syst_fitP, ROOT.kCyan, 29)
+    syst_nofit = setColorAndMarker(syst_nofit, ROOT.kGreen+2, 20)
+    syst_corrIh = setColorAndMarker(syst_corrIh, ROOT.kOrange, 39)
+    syst_corr1oP = setColorAndMarker(syst_corr1oP, ROOT.kGreen+2, 30)
+    syst_fitDeDx = setColorAndMarker(syst_fitDeDx, ROOT.kOrange+1, 33)
+
+    sysTot = setColorAndMarker(sysTot, ROOT.kRed, 34)
 
     leg2 = TLegend(0.12,0.7,0.5,0.93)
     leg2.SetNColumns(2)
@@ -367,7 +381,8 @@ def plotSummary(syst_stat,
     leg2.AddEntry(syst_fitP,"p fit","PE1")
     leg2.AddEntry(syst_fitDeDx,"I_{h} fit","PE1")
     #leg2.AddEntry(syst_nofit,"No fit","PE1")
-    leg2.AddEntry(syst_corrIh,"corr template I_{h}","PE1")
+    leg2.AddEntry(syst_corrIh, "corr template I_{h}", "PE1")
+    leg2.AddEntry(syst_corr1oP, "corr template 1/p", "PE1")
    
     syst_stat.Draw("AP")
     leg2.Draw("same")
@@ -377,16 +392,18 @@ def plotSummary(syst_stat,
     syst_fitP.Draw("P")
     #syst_nofit.Draw("P")
     syst_corrIh.Draw("P")
+    syst_corr1oP.Draw("P")
     syst_fitDeDx.Draw("P")
     sysTot.Draw("P")
     
     latex.Draw()
     latex2.Draw()
+    latex3.Draw()
     
     commandMkdir='mkdir -p '+oDir+'pdf '+oDir+'Cfile '+oDir+'rootfile'
     os.system(commandMkdir)
 
-    c2.SaveAs(oDir+"pdf/summary_"+outTitle+".pdf")
+    c2.SaveAs(oDir+"pdf/summary_" + outTitle + "_" + sample + "_" + etaname + ".pdf")
     c2.SaveAs(oDir+"Cfile/summary_"+outTitle+".root")
     c2.SaveAs(oDir+"rootfile/summary_"+outTitle+".C")
 
@@ -395,28 +412,29 @@ def plotSummary(syst_stat,
 
 # Setup
 onlyNominal = False    
-version     = "V12p31"
-etaname     = "Eta1"
+version     = "V12p35"
+etaname     = "Eta2p4"
 year        = "2024"
 sample      = "JetMET"
-region      = "8fp9"
-option      = "_etaRebinPerso_Oldfit__PUppiMETcut"
+region      = "9fp10"
+option      = "_CorrelationAdded_SigmaPtoverPt_0p5_EoP_0p1"
 option2     = "_OldFit_IhC"
 option3     = ""
+option4     = "_SigmaPtoverPt_0p5_EoP_0p1"
 
 directory   = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_" + version + "__" + region + option + "/" + etaname + "/"
 oDir        = directory + option3 + "SystCombined/"
 ofile       = TFile(oDir + "sysToTBinned_" + year + "_" + region + ".root", "RECREATE")
 
 plotType    = "mass_predBC_"
-version     = "V12p32"
 
-rebinning = array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
+rebinning = array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,
+                             410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
 sizeRebinning = len(rebinning) - 1
 
 
 # Only stat for the nominal
-inputNominal = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_EtaReweighting_" + etaname + option2 + ".root" 
+inputNominal = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_EtaReweighting_" + etaname + option4 + option2 + ".root" 
 ifileNominal = TFile(inputNominal)
 
 predNominal_def = ifileNominal.Get(plotType + region)
@@ -435,36 +453,38 @@ if (onlyNominal):
 
 
 # Up/Down for the others
-inputEtaD = directory + sample + year + "_" + version + "_rebinEta8_rebinIh4_rebinP2_EtaReweighting_" + etaname + option2 + ".root" 
-inputEtaU = directory + sample + year + "_" + version + "_rebinEta2_rebinIh4_rebinP2_EtaReweighting_" + etaname + option2 + ".root" 
+inputEtaD = directory + sample + year + "_" + version + "_rebinEta8_rebinIh4_rebinP2_EtaReweighting_" + etaname + option4 + option2 + ".root" 
+inputEtaU = directory + sample + year + "_" + version + "_rebinEta2_rebinIh4_rebinP2_EtaReweighting_" + etaname + option4 + option2 + ".root" 
 ifileEtaD = TFile(inputEtaD)
 ifileEtaU = TFile(inputEtaU)
 
-inputIhD = directory + sample + year + "_" + version + "_rebinEta4_rebinIh8_rebinP2_EtaReweighting_" + etaname + option2 + ".root" 
-inputIhU = directory + sample + year + "_" + version + "_rebinEta4_rebinIh2_rebinP2_EtaReweighting_" + etaname + option2 + ".root" 
+inputIhD = directory + sample + year + "_" + version + "_rebinEta4_rebinIh8_rebinP2_EtaReweighting_" + etaname + option4 + option2 + ".root" 
+inputIhU = directory + sample + year + "_" + version + "_rebinEta4_rebinIh2_rebinP2_EtaReweighting_" + etaname + option4 + option2 + ".root" 
 ifileIhD = TFile(inputIhD)
 ifileIhU = TFile(inputIhU)
 
-inputPD = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP4_EtaReweighting_" + etaname + option2 + ".root" 
-inputPU = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP1_EtaReweighting_" + etaname + option2 + ".root" 
+inputPD = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP4_EtaReweighting_" + etaname + option4 + option2 + ".root" 
+inputPU = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP1_EtaReweighting_" + etaname + option4 + option2 + ".root" 
 ifilePD = TFile(inputPD)
 ifilePU = TFile(inputPU)
 
-inputFitPUp     = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitPUp_EtaReweighting_" + etaname + option2 + ".root" 
-inputFitPDown   = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitPDown_EtaReweighting_" + etaname + option2 + ".root" 
+inputFitPUp     = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitPUp_EtaReweighting_" + etaname + option4 + option2 + ".root" 
+inputFitPDown   = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitPDown_EtaReweighting_" + etaname + option4 + option2 + ".root" 
 ifileFitPUp     = TFile(inputFitPUp)
 ifileFitPDown   = TFile(inputFitPDown)
 
-inputFitDeDxUp      = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitIhUp_EtaReweighting_" + etaname + option2 + ".root" 
-inputFitDeDxDown    = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitIhDown_EtaReweighting_" + etaname + option2 + ".root" 
+inputFitDeDxUp      = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitIhUp_EtaReweighting_" + etaname + option4 + option2 + ".root" 
+inputFitDeDxDown    = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_fitIhDown_EtaReweighting_" + etaname + option4 + option2 + ".root" 
 ifileFitDeDxUp      = TFile(inputFitDeDxUp)
 ifileFitDeDxDown    = TFile(inputFitDeDxDown)
 
-inputNoFit = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_EtaReweighting_" + etaname + "_NoFit" + "_IhC" + ".root" 
+inputNoFit = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_EtaReweighting_" + etaname + option4 + "_NoFit" + "_IhC" + ".root" 
 ifileNoFit = TFile(inputNoFit)
 
-inputcorrTemplateIh = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_corrTemplateIh_EtaReweighting_" + etaname + option2 + ".root"
-ifilecorrTemplateIh = TFile(inputcorrTemplateIh)
+inputcorrTemplateIh  = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_corrTemplateIh_EtaReweighting_" + etaname + option4 + option2 + ".root"
+ifilecorrTemplateIh  = TFile(inputcorrTemplateIh)
+inputcorrTemplate1oP = directory + sample + year + "_" + version + "_rebinEta4_rebinIh4_rebinP2_corrTemplate1oP_EtaReweighting_" + etaname + option4 + option2 + ".root"
+ifilecorrTemplate1oP = TFile(inputcorrTemplate1oP)
 
 
 print(inputNominal)
@@ -488,7 +508,8 @@ predFitDeDxDown = ifileFitDeDxDown.Get(plotType + region)
 
 predNoFit = ifileNoFit.Get(plotType + region)
 
-predcorrIh = ifilecorrTemplateIh.Get(plotType + region)
+predcorrIh  = ifilecorrTemplateIh.Get(plotType + region)
+predcorr1oP = ifilecorrTemplate1oP.Get(plotType + region)
 
 
 
@@ -520,8 +541,14 @@ predcorrIhNominal  = allSet(predNominal_def, sizeRebinning, rebinning, "corrIh_n
 predcorrIhDown     = allSet(predcorrIh, sizeRebinning, rebinning, "corrIh_down")
 predcorrIhUp       = allSet(predcorrIh, sizeRebinning, rebinning, "corrIh_up")
 
+predcorr1oPNominal  = allSet(predNominal_def, sizeRebinning, rebinning, "corr1oP_nominal")
+predcorr1oPDown     = allSet(predcorr1oP, sizeRebinning, rebinning, "corr1oP_down")
+predcorr1oPUp       = allSet(predcorr1oP, sizeRebinning, rebinning, "corr1oP_up")
 
 
+
+
+# Here: systematics computed as the maximum between abs(nom-up) and abs(nom-down) in each bin
 (syst_eta, syst_eta_mean, syst_eta_binned, syst_eta_binned_mean) = systMassAll(predEtaNominal, predEtaD, predEtaU, "Eta")
 (syst_ih, syst_ih_mean, syst_ih_binned, syst_ih_binned_mean) = systMassAll(predIhNominal, predIhD, predIhU, "Ih")
 (syst_p, syst_p_mean, syst_p_binned, syst_p_binned_mean) = systMassAll(predPNominal, predPD, predPU, "P")
@@ -530,6 +557,7 @@ predcorrIhUp       = allSet(predcorrIh, sizeRebinning, rebinning, "corrIh_up")
 (syst_fitDeDx, syst_fitDeDx_mean, syst_fitDeDx_binned, syst_fitDeDx_binned_mean) = systMassAll(predFitDeDxNominal, predFitDeDxDown, predFitDeDxUp, "Fit_dedx_systMassAl")
 (syst_nofit, syst_nofit_mean, syst_nofit_binned, syst_nofit_binned_mean) = systMassAll(predNoFitNominal, predNoFitDown, predNoFitUp, "NoFit_systMassAl")
 (syst_corrIh, syst_corrIh_mean, syst_corrIh_binned, syst_corrIh_binned_mean) = systMassAll(predcorrIhNominal, predcorrIhDown, predcorrIhUp, "corrIh_systMassAl")
+(syst_corr1oP, syst_corr1oP_mean, syst_corr1oP_binned, syst_corr1oP_binned_mean) = systMassAll(predcorr1oPNominal, predcorr1oPDown, predcorr1oPUp, "corr1oP_systMassAl")
 
 
 odirPlots = oDir + "individualSyst"
@@ -542,6 +570,7 @@ plotter(predFitPNominal,    predFitPDown,    predFitPUp,    "Nominal", "Fit p do
 plotter(predFitDeDxNominal, predFitDeDxDown, predFitDeDxUp, "Nominal", "Fit I_{h} down", "Fit I_{h} up", odirPlots, "plot_fitDeDx")
 plotter(predNoFitNominal,   predNoFitDown,   None,          "Nominal", "No fit",     "",         odirPlots, "plot_nofit")
 plotter(predcorrIhNominal,  predcorrIhDown,  None,          "Nominal", "corr template I_{h}", "", odirPlots, "plot_corrIh")
+plotter(predcorr1oPNominal, predcorr1oPDown, predcorr1oPUp, "Nominal", "corr template 1/p down", "corr template 1/p up", odirPlots, "plot_corr1oP")
 
 ofile.cd()
 syst_stat.Write()
@@ -553,9 +582,10 @@ syst_fitP.Write()
 syst_fitDeDx.Write()
 syst_nofit.Write()
 syst_corrIh.Write()
+syst_corr1oP.Write()
 
 #syst_nofit not taken !!
-listOfSyst = [syst_stat, syst_eta, syst_ih, syst_p, syst_fitP, syst_fitDeDx, syst_corrIh] #syst_nofit
+listOfSyst = [syst_stat, syst_eta, syst_ih, syst_p, syst_fitP, syst_fitDeDx, syst_corrIh, syst_corr1oP] #syst_nofit
 sysTot = systTotal(listOfSyst)
 sysTot.SetName("systTotal")
 sysTot.Write()
@@ -568,7 +598,8 @@ listOfSyst_binned = [syst_stat_binned,
                      syst_fitP_binned, 
                      syst_fitDeDx_binned, 
                      #syst_nofit_binned, 
-                     syst_corrIh_binned]
+                     syst_corrIh_binned,
+                     syst_corr1oP_binned]
 sysTot_binned = systTotal(listOfSyst_binned)
 sysTot_binned.SetName("systTotalBinned")
 sysTot_binned.Write()
@@ -589,9 +620,11 @@ plotSummary(syst_stat_binned,
             syst_fitP_binned,
             syst_nofit_binned,
             syst_corrIh_binned,
+            syst_corr1oP_binned,
             sysTot_binned,
             "Mass bin",
-            "binned_syst")
+            "binned_syst",
+            etaname)
 
 
 print("Everything is done, closing the output file.")

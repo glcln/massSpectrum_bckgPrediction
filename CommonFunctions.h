@@ -9,12 +9,49 @@
 #include <TChain.h>
 #include "TRandom3.h"
 #include <TH2.h>
+#include <TH3.h>
+#include "TF1.h"
+#include "TFitResult.h"
+#include "ROOT/TProcessExecutor.hxx"
+#include "ROOT/TSeq.hxx"
+#include <numeric>
 #include <TStyle.h>
 #include <TGraphErrors.h>
 
 #include "Regions.h"
 
 gErrorIgnoreLevel = kFatal;
+
+TH2F* TransposeTH2(const TH2F* h_in) {
+    int nx = h_in->GetNbinsX();
+    int ny = h_in->GetNbinsY();
+
+    const TAxis* ax = h_in->GetXaxis();
+    const TAxis* ay = h_in->GetYaxis();
+
+    std::vector<double> new_xbins, new_ybins;
+
+    for (int j = 1; j <= ny+1; ++j) new_xbins.push_back(ay->GetBinLowEdge(j));
+    for (int i = 1; i <= nx+1; ++i) new_ybins.push_back(ax->GetBinLowEdge(i));
+
+    TH2F* h_out = new TH2F(
+        Form("%s_transposed", h_in->GetName()),
+        Form("%s transposed", h_in->GetTitle()),
+        ny, new_xbins.data(),
+        nx, new_ybins.data()
+    );
+
+    for (int ix = 1; ix <= nx; ++ix) {
+        for (int iy = 1; iy <= ny; ++iy) {
+            double content = h_in->GetBinContent(ix, iy);
+            double error = h_in->GetBinError(ix, iy);
+            h_out->SetBinContent(iy, ix, content);  // swap X <-> Y
+            h_out->SetBinError(iy, ix, error);
+        }
+    }
+
+    return h_out;
+}
 
 TH2F* RebinTH2Y_varBins(TH2F* h, int nEta, double* eEta) {
     int nX = h->GetNbinsX();
@@ -135,6 +172,38 @@ TH2F* FoldAbsTH2Y(TH2F* h, const std::string& newName) {
     return hf;
 }
 
+TH1D MeanHisto(const std::vector<TH1D>& toys, const char* name, bool useSEM = false)
+{
+    if (toys.empty()) throw std::runtime_error("MeanHisto: vecteur vide");
+
+    const int    nb = toys.front().GetNbinsX();
+    const double N  = static_cast<double>(toys.size());
+
+    TH1D hMean(*static_cast<const TH1D*>(&toys.front()));
+    hMean.SetName(name);
+    hMean.SetTitle(name);
+    hMean.Reset("ICESM");
+    hMean.SetDirectory(nullptr);
+
+    for (int i = 0; i <= nb + 1; ++i) {
+        double sum = 0., sum2 = 0.;
+        for (const auto& h : toys) {
+            const double v = h.GetBinContent(i);
+            sum  += v;
+            sum2 += v * v;
+        }
+        const double mean = sum / N;
+        double var = (N > 1) ? (sum2 - N * mean * mean) / (N - 1.) : 0.;
+        if (var < 0.) var = 0.;
+
+        const double err = std::sqrt(var) / (useSEM ? std::sqrt(N) : 1.);
+
+        hMean.SetBinContent(i, mean);
+        hMean.SetBinError(i, err);
+    }
+    return hMean;
+}
+
 
 void loadHistograms(Region& r, 
                     TFile* f,
@@ -157,7 +226,6 @@ void loadHistograms(Region& r,
     r.ih_p                 = (TH2F*) f->Get(("ih_p_"+regionName).c_str())->Clone();
     r.ih_p_cross1D         = (TH2F*) r.ih_p->Clone(); r.ih_p_cross1D->Reset(); r.ih_p_cross1D->SetName(("cross1D_"+regionName).c_str());
     r.ih_p_cross1D_fit     = (TH2F*) r.ih_p->Clone(); r.ih_p_cross1D_fit->Reset(); r.ih_p_cross1D_fit->SetName(("cross1D_fit_"+regionName).c_str());
-    r.ih_p_cross1D_corr    = (TH2F*) r.ih_p->Clone(); r.ih_p_cross1D_corr->Reset(); r.ih_p_cross1D_corr->SetName(("cross1D_corr_"+regionName).c_str());
 
     r.ias_p                = (TH2F*) f->Get(("ias_p_"+regionName).c_str())->Clone();
     r.ias_pt               = (TH2F*) f->Get(("ias_pt_"+regionName).c_str())->Clone();
@@ -208,7 +276,6 @@ void loadHistograms(Region& r,
         r.ih_p->Rebin2D(rebinp,rebinih);
         r.ih_p_cross1D->Rebin2D(rebinp,rebinih);
         r.ih_p_cross1D_fit->Rebin2D(rebinp,rebinih);
-        r.ih_p_cross1D_corr->Rebin2D(rebinp,rebinih);
         
         r.ias_p->Rebin2D(rebinp,rebinih);
         r.ias_pt->Rebin2D(rebinp,rebinih);
@@ -372,9 +439,7 @@ void overflowLastBin(TH1F* h) {
 
 // rebinning histogram according to an array of bins
 TH1F* rebinHisto(TH1F* h) {
-    double xbins[33]={0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.};
-    std::vector<double> xbins_v;
-    for(double i=0.0;i<=1000.0;i+=50) xbins_v.push_back(i);
+    double xbins[36]={0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.};
     std::string newname = h->GetName(); 
     newname += "_rebinned";
     TH1F* hres = (TH1F*) h->Rebin(32,newname.c_str(),xbins);
@@ -414,8 +479,8 @@ void saveHistoRatio(TH1F* h1,TH1F* h2,std::string st1,std::string st2,std::strin
     h1->SetName(st1.c_str());
     h2->SetName(st2.c_str());
     if(rebin){
-        h1=rebinHisto(h1);
-        h2=rebinHisto(h2);
+        h1 = rebinHisto(h1);
+        h2 = rebinHisto(h2);
     }
     h1->Write();
     h2->Write();
@@ -436,10 +501,10 @@ TH1F meanHistoPE(std::vector<TH1F> vPE) {
     {
         float mean = 0, err = 0;
 
-        for(unsigned int pe=0; pe<vPE.size(); pe++) mean += vPE[pe].GetBinContent(i);
+        for(unsigned int pe = 0; pe<vPE.size(); pe++) mean += vPE[pe].GetBinContent(i);
         mean /= vPE.size();
 
-        for(unsigned int pe=0; pe<vPE.size(); pe++) err += pow(mean - vPE[pe].GetBinContent(i),2);
+        for(unsigned int pe = 0; pe<vPE.size(); pe++) err += pow(mean - vPE[pe].GetBinContent(i),2);
 
         if(vPE.size()>1) err = sqrt(err/(vPE.size()-1));
         else err = sqrt(err);
@@ -500,6 +565,7 @@ void bckgEstimate(const std::string& filename,
                   const bool useOldIhFit = false,
                   const bool useOld1oPFit = false,
                   const bool corrTemplateIh = false,
+                  const bool corrTemplate1oP = false,
                   const std::string& etaName = "",
                   const bool saveFits = false,
                   const int& fitIh = 1,
@@ -554,10 +620,10 @@ void bckgEstimate(const std::string& filename,
                         const Region& A, const Region& D, bool ifIhpSAME, 
                         const Region& B_ifIhpSAME, const std::string& st, const int& nPE = 200, 
                         const bool useFit = true, const bool useOldIhFit = false, const bool useOld1oPFit = false,
-                        const bool corrTemplateIh = false, const std::string& etaName = "", const bool& saveFits = false, 
+                        const bool corrTemplateIh = false, const bool corrTemplate1oP = false, const std::string& etaName = "", const bool& saveFits = false, 
                         const int& fitIh = 1, const int& fitP = 1, const int rebinp = 1, const float MyIhCut = C_data2024,
                         bool blind = false, const double& par_p2 = 4.70839, const double& par_p3 = 1.05005)
-                        -> std::tuple<TH1F, TH2F, float>
+                        -> std::tuple<TH1F, TH2F, float, TH2F, TH2F>
     {
 
         //cout<<"workerId: "<<workerID<<endl;
@@ -581,14 +647,16 @@ void bckgEstimate(const std::string& filename,
         TH1F* b_eta_base = (TH1F*)b_eta_p_base.ProjectionY();
         TH2F c_eta_p_base(*c.eta_p);
 
-        if(corrTemplateIh) corrIh(&b_ih_eta_base);
+        if (corrTemplateIh) corrIh(&b_ih_eta_base, etaName);
+        if (corrTemplate1oP) corr1oP(&c_eta_p_base, etaName);
         
         
-        if (st_sample=="data2017"){bc.K_=K_data2017;bc.C_=C_data2017;}
-        else if (st_sample=="data2018"){bc.K_=K_data2018;bc.C_=C_data2018;}
-        else if (st_sample=="data2024"){bc.K_=K_data2024;bc.C_=C_data2024;}
-        else if (st_sample=="mc2017"){bc.K_=K_mc2017;bc.C_=C_mc2017;}
-        else if (st_sample=="mc2018"){bc.K_=K_mc2018;bc.C_=C_mc2018;}
+        if (st_sample=="data2017")       {bc.K_ = K_data2017; bc.C_ = C_data2017;}
+        else if (st_sample=="data2018")  {bc.K_ = K_data2018; bc.C_ = C_data2018;}
+        else if (st_sample=="data2024")  {bc.K_ = K_data2024; bc.C_ = C_data2024;}
+        else if (st_sample=="mc2017")    {bc.K_ = K_mc2017;   bc.C_ = C_mc2017;}
+        else if (st_sample=="mc2018")    {bc.K_ = K_mc2018;   bc.C_ = C_mc2018;}
+        else if (st_sample=="mc2024")    {bc.K_ = K_mc2024;   bc.C_ = C_mc2024;}
 
         
         // 1/p fit
@@ -639,6 +707,8 @@ void bckgEstimate(const std::string& filename,
         if(ifIhpSAME) etaReweighingP(b_ih_eta, b_ifIhpSAME_eta, a_eta); //bloutaba = true; in C
         else etaReweighingP(c_eta_p,b_eta);
 
+        etaReweighingP(TransposeTH2(b_eta_p), b_ifIhpSAME_eta, a_eta); //bloutaba = true; in C
+
 
         // Mass prediction in the BC region
         bc.eta_p = c_eta_p;
@@ -671,6 +741,14 @@ void bckgEstimate(const std::string& filename,
         bc.pred_mass->Scale(normalisationABC/bc.pred_mass->Integral());
         bc.pred_mass_eta->Scale(normalisationABC/bc.pred_mass_eta->Integral());
 
+        TH1F out_pred_mass    (*bc.pred_mass);
+        TH2F out_pred_mass_eta(*bc.pred_mass_eta);
+        TH2F out_ih_eta       (*bc.ih_eta);
+        TH2F out_p_eta    (*b_eta_p);
+        out_pred_mass.SetDirectory(nullptr);
+        out_pred_mass_eta.SetDirectory(nullptr);
+        out_ih_eta.SetDirectory(nullptr);
+        out_p_eta.SetDirectory(nullptr);
 
         // End
         delete a_ih_eta;
@@ -679,30 +757,54 @@ void bckgEstimate(const std::string& filename,
         delete c_eta_p;
         delete b_eta;
         delete b_ifIhpSAME_ih_eta;
+        bc.ih_eta = nullptr;
+        bc.eta_p  = nullptr;
+        delete RNG;
 
-        return {*bc.pred_mass, *bc.pred_mass_eta, normalisationABC};
+        return {out_pred_mass, out_pred_mass_eta, normalisationABC, out_ih_eta, out_p_eta};
     };
 
     
     // Loop on the toys
     ROOT::TProcessExecutor workers(26);
     auto workItemToRun = std::bind (workItem, _1, filename, st_sample, B, C, BC, A, D, ifIhpSAME, B_ifIhpSAME, st, nPE,
-                                    useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
+                                    useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, corrTemplate1oP, etaName, saveFits, fitIh, fitP, rebinp, 
                                     MyIhCut, blind, par_p2, par_p3);
     
     auto vPE = workers.Map(workItemToRun, ROOT::TSeqI(nPE));
+    if (vPE.size() != (size_t)nPE) {
+        std::cerr << "ERREUR: " << vPE.size() << "/" << nPE
+                  << " toys revenus — des workers ont crashe" << std::endl;
+        return;
+    }
 
 
     // Get the results
     std::vector<TH1F> histo_pred_mass;
     std::vector<TH2F> histo_pred_mass_eta;
     std::vector<float> normalisations;
+    std::vector<TH1D> Ih_eta, oP_eta;
 
     for (const auto& result : vPE) {
         histo_pred_mass.push_back(std::get<0>(result));   // Récupère *bc.pred_mass
         histo_pred_mass_eta.push_back(std::get<1>(result)); // Récupère *bc.pred_mass_eta
         normalisations.push_back(std::get<2>(result)); // Récupère normalisationABC
+        
+        const TH2F& h2 = std::get<3>(result);
+        std::unique_ptr<TH1D> proj(h2.ProjectionY(Form("ih_eta_py_%zu", Ih_eta.size())));
+        proj->SetDirectory(nullptr);
+        Ih_eta.push_back(*proj);
+        Ih_eta.back().SetDirectory(nullptr);
+
+        const TH2F& h3 = std::get<4>(result);
+        std::unique_ptr<TH1D> proj2(h3.ProjectionX(Form("p_eta_px_%zu", oP_eta.size())));
+        proj2->SetDirectory(nullptr);
+        oP_eta.push_back(*proj2);
     }
+
+    // Save the mean Ih_eta:
+    TH1D h_ih_eta_mean = MeanHisto(Ih_eta, "ih_eta_mean");        // bande = RMS des toys
+    TH1D h_oP_eta_mean = MeanHisto(oP_eta, "oP_eta_mean");        // bande = RMS des toys
 
 
     // Mean histogram of the toys
@@ -761,16 +863,25 @@ void bckgEstimate(const std::string& filename,
     // Draw on one canvas all the histos of the vector histo_pred_mass
     TCanvas *c1 = new TCanvas("c1","c1",800,800);
     c1->cd();
-    for (int i=0; i<histo_pred_mass.size(); i++) histo_pred_mass[i].Rebin(10);
+    for (size_t i=0; i<histo_pred_mass.size(); i++) histo_pred_mass[i].Rebin(10);
     histo_pred_mass[0].Draw("hist");
-    for (int i=1; i<histo_pred_mass.size(); i++) histo_pred_mass[i].Draw("hist same");
+    for (size_t i=1; i<histo_pred_mass.size(); i++) histo_pred_mass[i].Draw("hist same");
     c1->Write();
 
     // fill a new histo with norm/d.mass->integral:
     TH1F* h_norm = new TH1F("h_norm", "h_norm", 40, 0.9, 1.1);
     h_norm->GetXaxis()->SetTitle("BC/AD");
     h_norm->GetYaxis()->SetTitle("Entries");
-    for(int i=0; i<normalisations.size(); i++) h_norm->Fill(normalisations[i]/d.mass->Integral());
+    for(size_t i=0; i<normalisations.size(); i++) h_norm->Fill(normalisations[i]/d.mass->Integral());
     h_norm->Write();
+
+    h_ih_eta_mean.Write();
+    TH1D* ih_eta_VR = D.ih_eta->ProjectionY();
+    ih_eta_VR->SetName("ih_VR");
+    ih_eta_VR->Write();
+    h_oP_eta_mean.Write();
+    TH1D* eta_p_VR = D.eta_p->ProjectionX();
+    eta_p_VR->SetName("eta_VR");
+    eta_p_VR->Write();
 
 }

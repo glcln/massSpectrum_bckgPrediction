@@ -9,27 +9,29 @@ parser = OptionParser(usage="Usage: python %prog codeVersion")
 (opt,args) = parser.parse_args()
 
 datasetList = [
-    "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p32",
-    #"/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/HistForBkg_MC",
+    #"/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/TTbar2024_V15/TTbar2024_V15p9_weighted",
+    "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35",
+    #"/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/HistForBkg_MC_V3",
 ]
 
 nPE = "200"
 
-#[label, rebinEta, rebinIh, rebinMom, fitIh, fitMom, useFit, corrTemplateIh]
+#[label, rebinEta, rebinIh, rebinMom, fitIh, fitMom, useFit, corrTemplateIh, corrTemplate1oP]
 config = [
-    #["nominal", "4", "4", "2", "1", "1", "1", "0"],
-    #["etaup", "2", "4", "2", "1", "1", "1", "0"],
-    #["etadown", "8", "4", "2", "1", "1", "1", "0"],
-    #["ihup", "4", "2", "2", "1", "1", "1", "0"],
-    #["ihdown", "4", "8", "2", "1", "1", "1", "0"],
-    #["momup", "4", "4", "1", "1", "1", "1", "0"],
-    #["momdown", "4", "4", "4", "1", "1", "1", "0"],
-    #["useFit", "4", "4", "2", "1", "1", "0", "0"],
-    #["FitIhUp", "4", "4", "2", "2", "1", "1", "0"],
-    #["FitIhDown", "4", "4", "2", "0", "1", "1", "0"],
-    #["FitMomUp", "4", "4", "2", "1", "2", "1", "0"],
-    #["FitMomDown", "4", "4", "2", "1", "0", "1", "0"],
-    #["corrTemplateIh", "4", "4", "2", "1", "1", "1", "1"],
+    #["nominal", "4", "4", "2", "1", "1", "1", "0", "0"],
+    #["etaup", "2", "4", "2", "1", "1", "1", "0", "0"],
+    #["etadown", "8", "4", "2", "1", "1", "1", "0", "0"],
+    #["ihup", "4", "2", "2", "1", "1", "1", "0", "0"],
+    #["ihdown", "4", "8", "2", "1", "1", "1", "0", "0"],
+    #["momup", "4", "4", "1", "1", "1", "1", "0", "0"],
+    #["momdown", "4", "4", "4", "1", "1", "1", "0", "0"],
+    #["FitIhUp", "4", "4", "2", "2", "1", "1", "0", "0"],
+    #["FitIhDown", "4", "4", "2", "0", "1", "1", "0", "0"],
+    #["FitMomUp", "4", "4", "2", "1", "2", "1", "0", "0"],
+    #["FitMomDown", "4", "4", "2", "1", "0", "1", "0", "0"],
+    #["useFit", "4", "4", "2", "1", "1", "0", "0", "0"],
+    #["corrTemplateIh", "4", "4", "2", "1", "1", "1", "1", "0"],
+    #["corrTemplate1oP", "4", "4", "2", "1", "1", "1", "0", "1"],
 ]
 
 
@@ -51,9 +53,13 @@ for dataset in datasetList:
         os.system("sed -i 's|fitMom|" + conf[5] + "|g' configFile_readHisto_toLaunch.txt")
         os.system("sed -i 's|useFit|" + conf[6] + "|g' configFile_readHisto_toLaunch.txt")
         os.system("sed -i 's|corrTemplateIh|" + conf[7] + "|g' configFile_readHisto_toLaunch.txt")
+        os.system("sed -i 's|corrTemplate1oP|" + conf[8] + "|g' configFile_readHisto_toLaunch.txt")
 
         os.system("cat configFile_readHisto_toLaunch.txt")
-        os.system("time root -l -q -b step2_backgroundPrediction.C")    
+        os.system("time root -l -q -b step2_backgroundPrediction.C")
+
+        os.system("rm configFile_readHisto_toLaunch_tmp.txt")
+        os.system("rm configFile_readHisto_toLaunch.txt")
     i += 1
 '''
 
@@ -64,7 +70,7 @@ original_lines = code.split('\n')
 config_start_index = original_lines.index('config = [')
 
 # Iterate through the configs
-for i in range(config_start_index + 1, config_start_index + 14):
+for i in range(config_start_index + 1, config_start_index + 15):
     # Uncomment the config line
     lines = original_lines[:]
     lines[i] = lines[i].replace('#', '')

@@ -1,15 +1,17 @@
 import ROOT
 import os
 
-regions     = '9fp10'
+regions     = '8fp9'
 eta         = 'Eta2p4'
+version     = '3'
 OnlyNominal = True
 isMC        = True
+option      = 'SigmaPtoverPt_0p5_EoP_0p1'
 
 
-ifile = '/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p31__' + regions + '_etaRebinPerso_Oldfit__PUppiMETcut/BKG/' + eta + '/HistForBkg_MC_rebinEta4_rebinIh4_rebinP2_EtaReweighting_' + eta + '_OldFit_IhC.root'
-odir  = '/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p31__' + regions + '_etaRebinPerso_Oldfit__PUppiMETcut/BKG/' + eta + '/Plots_' + regions
-labelName = 'METanalysis_TestPUppiMETCut_' + eta
+ifile = '/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/MC_2024_V12p35' + '__' + regions + '_' + option + '/' + eta + '/HistForBkg_MC_V' + version + '_rebinEta4_rebinIh4_rebinP2_EtaReweighting_' + eta + '_' + option + '_OldFit_IhC.root'
+odir  = '/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/MC_2024_V12p35' + '__' + regions + '_' + option + '/' + eta + '/Plots_' + regions
+labelName = 'METanalysis_TestPUppiMETCut_' + option + '_' + eta
 
 
 

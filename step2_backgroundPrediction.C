@@ -1,3 +1,11 @@
+#include <fstream>    // ifstream
+#include <sstream>    // stringstream
+#include <string>
+#include <iostream>
+#include <cstring>    // strncmp
+#include "TFile.h"
+#include "TError.h"   // gErrorIgnoreLevel, kFatal
+
 #include "CommonFunctions.h"
 
 using namespace std;
@@ -8,25 +16,31 @@ gErrorIgnoreLevel = kFatal;
 void step2_backgroundPrediction() {
     ifstream infile;
     infile.open("configFile_readHisto_toLaunch.txt");
+    if (!infile.is_open()) {
+        std::cerr << "Error opening file: configFile_readHisto_toLaunch.txt" << std::endl;
+        return;
+    }
     std::string line;
     std::string filename;
     int nPE;
     int rebineta, rebinih, rebinp;
     bool rebin;
-    bool corrTemplateIh;
+    bool corrTemplateIh, corrTemplate1oP;
     int fitIh, fitP;
     bool useFit;
     while(std::getline(infile,line)){
         if(std::strncmp(line.c_str(),"#",1)==0) continue;
         std::cout << line << std::endl;
         std::stringstream ss(line);
-        ss >> filename >> nPE >> rebin >> rebineta >> rebinih >> rebinp >> corrTemplateIh >> fitIh >> fitP >> useFit;
+        ss >> filename >> nPE >> rebin >> rebineta >> rebinih >> rebinp >> fitIh >> fitP >> useFit >> corrTemplateIh >> corrTemplate1oP;
     }
+    infile.close();
 
     std::string outfilename_;
     outfilename_ = filename + "_rebinEta" + to_string(rebineta) + "_rebinIh" + to_string(rebinih) + "_rebinP" + to_string(rebinp);
 
     if(corrTemplateIh) outfilename_ += "_corrTemplateIh";
+    if(corrTemplate1oP) outfilename_ += "_corrTemplate1oP";
     if(fitIh==0) outfilename_ += "_fitIhDown";
     if(fitIh==2) outfilename_ += "_fitIhUp";
     if(fitP==0) outfilename_ += "_fitPDown";
@@ -35,29 +49,53 @@ void step2_backgroundPrediction() {
 
 
     std::string st_sample = "data2024";
+    //std::string st_sample = "mc2024";
 
-    std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1";
-    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4";
-    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta2p4";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta2p4";
+    
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_EoP_0p1_Eta1";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_EoP_0p1_Eta1_2p4";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_EoP_0p1_Eta2p4";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_Eta1";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_Eta1_2p4";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_Eta2p4";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_EoP_0p1_Eta1";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_EoP_0p1_Eta1_2p4";
+    // std::string Ext = "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_EoP_0p1_Eta2p4";
+    
     //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1p2_2p2";
     //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1p2_2p4";
     
     //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_IhC";
-    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p1";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p1";
     //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p2";
     //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p3";
-    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p4";
-    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p5";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p4";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p5";
     //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p6";
-    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p7";
-    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p8";
-    // std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p9";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p7";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p8";
+    //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih3p9";
     //std::string Ext = "_METanalysis_TestPUppiMETCut_Eta1_2p4_Ih4p0";
-    
+
+        
     std::string etaName = "";
     if (Ext == "_METanalysis_TestPUppiMETCut_Eta1") etaName = "_Eta1";
     else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1_2p4") etaName += "_Eta1_2p4";
     else if (Ext == "_METanalysis_TestPUppiMETCut_Eta2p4") etaName += "_Eta2p4";
+
+    else if (Ext == "_METanalysis_TestPUppiMETCut_EoP_0p1_Eta1") etaName += "_Eta1_EoP_0p1";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_EoP_0p1_Eta1_2p4") etaName += "_Eta1_2p4_EoP_0p1";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_EoP_0p1_Eta2p4") etaName += "_Eta2p4_EoP_0p1";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_Eta1") etaName += "_Eta1_SigmaPtoverPt_0p5";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_Eta1_2p4") etaName += "_Eta1_2p4_SigmaPtoverPt_0p5";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_Eta2p4") etaName += "_Eta2p4_SigmaPtoverPt_0p5";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_EoP_0p1_Eta1") etaName += "_Eta1_SigmaPtoverPt_0p5_EoP_0p1";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_EoP_0p1_Eta1_2p4") etaName += "_Eta1_2p4_SigmaPtoverPt_0p5_EoP_0p1";
+    else if (Ext == "_METanalysis_TestPUppiMETCut_SigmaPtoverPt_0p5_EoP_0p1_Eta2p4") etaName += "_Eta2p4_SigmaPtoverPt_0p5_EoP_0p1";
+
     else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1p2_2p2") etaName += "_Eta1p2_2p2";
     else if (Ext == "_METanalysis_TestPUppiMETCut_Eta1p2_2p4") etaName += "_Eta1p2_2p4";
 
@@ -155,29 +193,26 @@ void step2_backgroundPrediction() {
     bool ifIhpSAME = true; // TRUE: Ih and p templates in C region but B still used for the normalisation
     
 
-        // In 8fp9
-    blind = false;
-    bckgEstimate(DataSetName, st_sample, rc_3fp8, rc_3fp8, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
-                 "8fp9", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
+        // VALIDATION REGION: 8fp9
+    // blind = false;
+    // bckgEstimate(DataSetName, st_sample, rc_3fp8, rc_3fp8, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
+    //              "8fp9", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, corrTemplate1oP, etaName, saveFits, fitIh, fitP, rebinp, 
+    //              MyIhCut, blind);
+
+        // SEARCH REGION: 9fp10
+    blind = true;
+    bckgEstimate(DataSetName, st_sample, rc_3fp9, rc_3fp9, rbc_9fp10, ra_3fp9, rd_9fp10, ifIhpSAME, rb_9fp10,
+                 "9fp10", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, corrTemplate1oP, etaName, saveFits, fitIh, fitP, rebinp, 
                  MyIhCut, blind);
+    
 
-    // Debug by taking templates in D
+
+        // Debug by taking templates in D
     // bckgEstimate(DataSetName, st_sample, rd_8fp9, rd_8fp9, rbc_8fp9, ra_3fp8, rd_8fp9, ifIhpSAME, rb_8fp9,
-    //              "8fp9", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
+    //              "8fp9", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, corrTemplate1oP, etaName, saveFits, fitIh, fitP, rebinp, 
     //              MyIhCut, blind);
 
 
-        // In 9fp10 with A and C in 3fp9
-    // blind = true;
-    // bckgEstimate(DataSetName, st_sample, rc_3fp9, rc_3fp9, rbc_9fp10, ra_3fp9, rd_9fp10, ifIhpSAME, rb_9fp10,
-    //              "9fp10", nPE, useFit, useOldIhFit, useOld1oPFit, corrTemplateIh, etaName, saveFits, fitIh, fitP, rebinp, 
-    //              MyIhCut, blind);
-    
-
-
-        // Only in C: no Ih reweighting in Region.h to change
-    //bckgEstimate(st_sample, rc_3fp8, rc_3fp8, rbc_3fp8, rc_3fp8, rc_3fp8, ifIhpSAME, rc_3fp8, "3fp8", nPE, fitIh, fitP, blind);
-    
 
     delete ofile;
     return;
