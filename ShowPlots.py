@@ -2,7 +2,7 @@
 """Lance le plotting du spectre en masse (MyMacroMass.py).
 
     python ShowPlots.py
-    python ShowPlots.py --regions 8fp9,9fp10 --etas Eta1,Eta1_2p4,Eta2p4
+    python ShowPlots.py --etas Eta1,Eta1_2p4,Eta2p4
     python ShowPlots.py --label binEtaUp
     python ShowPlots.py --syst
 """
@@ -16,8 +16,9 @@ BASE = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros"
 # --- a regler a la main ---------------------------------------------------
 # Meme chemin que dans le launcher de step2 : il donne le prefixe des .root
 # produits et la version (ce qui suit "_V").
-DATASET    = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35"
-SAMPLETYPE = "data2024"   # data2017|data2018|data2024|mc2017|mc2018|mc2024
+#DATASET    = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35"
+DATASET    = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/HistForBkg_MC_V3"
+SAMPLETYPE = "mc2024"   # data2017|data2018|data2024|mc2017|mc2018|mc2024
 SUFFIX     = "v2"         # suffixe libre du repertoire de travail
 CUTS       = ""           # selection du step1 : "" | "_SigmaPtoverPt_0p5_EoP_0p1" | ...
 VSIGNAL    = "19p12"   # version des echantillons gluino
@@ -74,12 +75,6 @@ print("Repertoire : {}".format(indir))
 print("Prefixe    : {}   version {}   {}".format(
       stem, version, "MC" if isMC else "data"))
 
-if not os.path.isdir(indir):
-    print("\nRepertoire introuvable. Les .root de step2 sont ecrits a cote du")
-    print("dataset ; pense a les y copier :")
-    print("  mkdir -p {}".format(indir))
-    print("  cp {}_*.root {}/".format(DATASET, indir))
-    sys.exit(1)
 
 etas    = [e.strip() for e in opt.etas.split(",")    if e.strip()]
 

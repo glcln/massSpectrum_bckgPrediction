@@ -16,12 +16,13 @@ parser.add_option("--only", dest="only", default=None,
 (opt, args) = parser.parse_args()
 
 datasetList = [
-    "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35",
+    #("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35", "data2024"),
+    ("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/HistForBkg_MC_V3", "mc2024"),
 ]
 
 outputDir      = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros"
-etaRangeName   = "Eta1_2p4"
-sampleTypeName = "data2024"
+etaRangeName   = "Eta2p4"
+sampleTypeName = "mc2024"
 labelDir       = "v2"
 
 # Reglages communs a tous les lancements de cette session.
@@ -146,13 +147,14 @@ def write_config(path, settings):
 
 failed = []
 
-for dataset in datasetList:
+for dataset, sampleTypeName in datasetList:
     print("\nLaunch on dataset:    " + dataset + "\n")
     for conf in toRun:
         settings = dict(common)
         settings.update(nominal)
         settings.update(conf)
         settings["sample"] = dataset
+        settings["sampleType"] = sampleTypeName
 
         label    = settings["label"]
         cfgPath  = "configFile_{}.txt".format(label)
