@@ -1,16 +1,14 @@
 #!/usr/bin/python
 
 import sys, getopt, os
-sys.argv.append(' -b- ')
 import ROOT
 import math
 import array
-import numpy as np
 import ctypes
 sys.path.append("/safe/ui3_1/cms/gcoulon")
 
-from ROOT import THStack, TCanvas, TLegend, TLatex, TPad, TH1, TH2, TLine
-import CMS_lumi, tdrstyle
+from ROOT import THStack, TCanvas, TLegend, TPad, TH1, TLine
+import tdrstyle
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning + 1  # supprime les Info
@@ -19,13 +17,12 @@ ROOT.Math.MinimizerOptions.SetDefaultPrintLevel(-1)
 tdrstyle.setTDRStyle()
 
 
-year = '2024'
-era = ''
-
-
 #----------------------------------------------------
 #                       Functions
 #----------------------------------------------------
+
+def asBool(s):
+    return str(s).strip().lower() in ("true", "1", "yes", "y", "on")
 
 def setColorAndMarker(h1,color,markerstyle):
     h1.SetLineColor(color)
@@ -84,15 +81,6 @@ def overflowInLastBin(h, data, mass_max_Display):
         else: print ("Error: mass_max_Display > histo edge last bin")
     else:
         if (debugprint): print ('Case where mass_max_Display = ', mass_max_Display, ' useless to overflowInLastBin in this case')
-
-def underflowInFirstBin(h,data=False):
-    h.SetBinContent(1,h.GetBinContent(0)+h.GetBinContent(1))
-    h.SetBinContent(0,0)
-    if(data): 
-        h.SetBinError(1,math.sqrt(h.GetBinContent(1)))
-    else:
-        h.SetBinError(1,math.sqrt(h.GetBinError(0)**2+h.GetBinError(1)**2))
-    h.SetBinError(0,0)
 
 def underflowAndOverflow(h, data, mass_max_Display):
     #underflowInFirstBin(h,data)
@@ -185,52 +173,11 @@ def addHSyst(h, h_syst, hCorrBias):
         resU.SetBinContent(i, res.GetBinContent(i) + errorTotal)
     return (res, resD, resU)
 
-def testChi2with1(h,x=-1):
-    chi2=0
-    ndf=-1
-    if(x!=-1):
-        upTo=h.FindBin(x)
-    else:
-        upTo=h.GetNbinsX()
-    for i in range (1,upTo):
-        chi2+=pow(h.GetBinContent(i)-1,2)
-        ndf+=1
-    
-    return (chi2,ndf,ROOT.TMath.Prob(chi2,ndf))
-
 def blindAnyUp(h,m):
     for i in range (0,h.GetNbinsX()+1):
         mass = h.GetBinLowEdge(i)
         if(mass>m): 
             h.SetBinContent(i,0)
-
-def blindMassUp(h,m):
-    for i in range (0,h.GetNbinsX()+1):
-        mass = h.GetBinLowEdge(i)
-        if(mass>m): 
-            h.SetBinContent(i,0)
-
-def blindMass(h,m):
-    for i in range (0,h.GetNbinsX()+1):
-        mass = h.GetBinLowEdge(i)
-        if(mass<m): 
-            h.SetBinContent(i,0)
-
-def poissonHisto(h,RNG):
-    for i in range (0,h.GetNbinsX()):
-        h.SetBinContent(i,RNG.Poisson(h.GetBinContent(i)))
-
-def PE_Pred(obs,h,nPE):
-    h_chi2=ROOT.TH1F("chi2",";#chi^{2};",100,0,200)
-    h_KS=ROOT.TH1F("KS",";Kolmogorov-Smirnov test;",100,0,1e-1)
-    RNG=ROOT.TRandom3()
-    for i in range(nPE):
-        poissonHisto(h,RNG)
-        chi2=h.Chi2Test(obs,"CHI2/NDF")
-        KS=h.KolmogorovTest(obs,"M")
-        h_chi2.Fill(chi2)
-        h_KS.Fill(KS)
-    return h_chi2, h_KS
 
 def MyoverflowInLastBin(h):
     res = h.Clone()
@@ -243,18 +190,6 @@ def MyunderflowInFirstBin(h):
     res.SetBinContent(1, h.GetBinContent(0) + h.GetBinContent(1))
     res.SetBinContent(0, 0)
     return res
-
-def statErrRInt(h1, name):
-    statErr = h1.Clone()
-    statErr.SetName(name)
-    e = ctypes.c_double(0.0)
-    for i in range(1, statErr.GetNbinsX()):
-        c = h1.IntegralAndError(i, h1.GetNbinsX(), e, "")
-        if e.value > 0:
-            statErr.SetBinContent(i, e.value / c)
-        else:
-            statErr.SetBinContent(i, 0)
-    return 100 * statErr
 
 def statErr(h1, name):
     statErr = h1.Clone()
@@ -270,21 +205,20 @@ def allSet(h, sizeRebinning,  rebinning , st):
     h = h.Rebin(sizeRebinning, st, rebinning)
     h = MyoverflowInLastBin(h)
     h = MyunderflowInFirstBin(h)
-    h.Scale(1./h.Integral())
+    if h.Integral() > 0: h.Scale(1./h.Integral())
     return h
 
 def getNominalSyst(ifile, plotType, region, sizeRebinning, rebinning):
+    """Erreur statistique relative (%) bin a bin de la prediction nominale.
+    Tient lieu de systematique quand on n'a pas le fichier de syst. combinees."""
     pred = ifile.Get(plotType + region)
+    if not pred:
+        raise RuntimeError("'{}{}' absent du fichier".format(plotType, region))
+
     pred = allSet(pred, sizeRebinning, rebinning, "nominal_def")
-
-    syst_stat = statErrRInt(pred, "Stat")
     syst_stat_binned = statErr(pred, "Stat_binned")
-
-    for h in (pred, syst_stat, syst_stat_binned):
-        h.SetDirectory(0)
-    ifile.Close()
-
-    return syst_stat, syst_stat_binned
+    syst_stat_binned.SetDirectory(0)
+    return syst_stat_binned   # ne PAS fermer ifile : pred/obs en dependent
 
 
 #----------------------------------------------------
@@ -293,76 +227,92 @@ def getNominalSyst(ifile, plotType, region, sizeRebinning, rebinning):
 
 def main(argv):
     # -------------- Setup --------------
-    outputfile = ''
-    region = ''
-    odir = ''
-    labelName = ''
+    outputfile  = ''
+    inputfile   = ''
+    cuts        = ''
+    systfile    = ''
+    region      = ''
+    odir        = ''
+    eta         = ''
     nominalOnly = True
-    eta = ''
-    isMC = False
+    isMC        = False
+
+    # Reglages surchargables depuis le lanceur
+    isTTbar = False       # MC : ne tracer que le ttbar dileptonique
+    Vsignal = "19p12"     # version des echantillons gluino
+    year    = "2024"
+    era     = ""          # "" (toute l'annee) | "F" | "G"
 
     try:
-        opts, args = getopt.getopt(argv,"hi:o:r:d",["ifile=","labelName=","ofile=","region=","odir=", "nom=", "eta=", "isMCsample="])
+        opts, args = getopt.getopt(argv, "", ["ifile=", "cuts=", "ofile=",
+                                              "region=", "odir=", "nom=",
+                                              "eta=", "isMC=", "systfile=",
+                                              "vsignal=", "isTTbar=",
+                                              "year=", "era="])
     except getopt.GetoptError:
-        print ('test.py -i <inputfile> -e <labelName> -o <outputfile> -r <region> -d <odir> -n <nominalOnly>')
+        print("MyMacroMass.py --ifile <f> --cuts <c> --ofile <o> --region <r> "
+              "--odir <d> --nom <bool> --eta <e> --isMC <bool> --systfile <f> "
+              "[--vsignal <v>] [--isTTbar <bool>] [--year <y>] [--era <e>]")
         sys.exit(2)
-    for opt, arg in opts:
-        if opt == '-h':
-            print ('test.py -i <inputfile> -e <labelName> -o <outputfile> -r <region> -d <odir> -n <nominalOnly>')
-            sys.exit()
-        elif opt in ("-i", "--ifile"):
-            inputfile = arg
-        elif opt in ("-e", "--labelName"):
-            labelName = arg
-        elif opt in ("-o", "--ofile"):
-            outputfile = arg
-        elif opt in ("-r", "--region"):
-            region = arg
-        elif opt in ("-d", "--odir"):
-            odir = arg
-        elif opt in ("-n", "--nom"):
-            nominalOnly = arg.lower() in ("true", "1", "yes")
-        elif opt in ("-a", "--eta"):
-            eta = arg
-        elif opt in ("-mc", "--isMCsample"):
-            isMC = arg.lower() in ("true", "1", "yes")
+
+    for o, arg in opts:
+        if   o == "--ifile":    inputfile   = arg
+        elif o == "--cuts":     cuts        = arg
+        elif o == "--ofile":    outputfile  = arg
+        elif o == "--region":   region      = arg
+        elif o == "--odir":     odir        = arg
+        elif o == "--nom":      nominalOnly = asBool(arg)
+        elif o == "--eta":      eta         = arg
+        elif o == "--isMC":     isMC        = asBool(arg)
+        elif o == "--systfile": systfile    = arg
+        elif o == "--vsignal":  Vsignal     = arg
+        elif o == "--isTTbar":  isTTbar     = asBool(arg)
+        elif o == "--year":     year        = arg
+        elif o == "--era":      era         = arg
 
     os.system('mkdir -p ' + odir)
     outputfile = odir + '/' + outputfile
 
-    print (' Input file: ', inputfile)
-    print ('Output file: ', outputfile)
-    print ('     Region: ', region)
-
-    blind       = False
     isBinWidth  = False
     doRebin     = True
-    labelRegion = region
     PlotSignal  = True
     doYouWantRratio = False
-    Vsignal     = "19p12"
-    isTTbar     = False
-    option      = ""#SigmaPtoverPt_0p5_EoP_0p1_"
+    blind       = (region == "9fp10")
+    mcTag       = "METanalysis_TestPUppiMETCut" + cuts + "_" + eta
 
+    print (' Input file: ', inputfile)
+    print ('Output file: ', outputfile)
+    print ('     Region: ', region, '   eta:', eta, '   blind:', blind)
+    print ('     Signal: V' + Vsignal, '   year:', year, ('era ' + era) if era else '')
 
 
     ifile = ROOT.TFile(inputfile)
+    if (not ifile) or ifile.IsZombie():
+        print("Erreur: impossible d'ouvrir " + inputfile)
+        sys.exit(1)
+
+    pred   = ifile.Get("mass_predBC_" + region)
+    obs    = ifile.Get("mass_obs_"    + region)
+    if (not pred) or (not obs):
+        print("Erreur: 'mass_predBC_{0}' ou 'mass_obs_{0}' absent de {1}".format(
+              region, inputfile))
+        print("  -> as-tu lance step2 avec runVR/runSR pour cette region ?")
+        sys.exit(1)
+    for h in (pred, obs):
+        h.SetDirectory(0)
     
 
-
-    pred = ifile.Get("mass_predBC_" + region)
-    obs = ifile.Get("mass_obs_" + region)
     if isMC:
         ifileWjet  = ROOT.TFile.Open("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Wjets2024_V14/WjetMuNu2024_V14p14_weighted.root")
         ifileTTbar = ROOT.TFile.Open("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/TTbar2024_V15/TTbar2024_V15p10_weighted.root")
         ifileTTbarSemiLep = ROOT.TFile.Open("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/TTbar2024_V15/TTbarSemiLep2024_V22p1_weighted.root")
         ifileQCD   = ROOT.TFile.Open("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/QCD2024_V16/QCD2024_mu_V16p3_weighted.root")
 
-        obsQCD   = ifileQCD.Get("mass_regionD_" + region +"_METanalysis_TestPUppiMETCut_" + option + eta if region=="9fp10" else "mass_regionC_" + region +"_METanalysis_TestPUppiMETCut_" + option + eta )
-        obsWjet  = ifileWjet.Get("mass_regionD_" + region +"_METanalysis_TestPUppiMETCut_" + option + eta if region=="9fp10" else "mass_regionC_" + region +"_METanalysis_TestPUppiMETCut_" + option + eta )
-        obsTTbar = ifileTTbar.Get("mass_regionD_" + region +"_METanalysis_TestPUppiMETCut_" + option + eta if region=="9fp10" else "mass_regionC_" + region +"_METanalysis_TestPUppiMETCut_" + option + eta )
-        obsTTbarSemiLep = ifileTTbarSemiLep.Get("mass_regionD_" + region +"_METanalysis_TestPUppiMETCut_" + option + eta if region=="9fp10" else "mass_regionC_" + region +"_METanalysis_TestPUppiMETCut_" + option + eta )
-
+        prefix = "mass_regionD_" if region == "9fp10" else "mass_regionC_"
+        obsQCD          = ifileQCD.Get(prefix + region + "_" + mcTag)
+        obsWjet         = ifileWjet.Get(prefix + region + "_" + mcTag)
+        obsTTbar        = ifileTTbar.Get(prefix + region + "_" + mcTag)
+        obsTTbarSemiLep = ifileTTbarSemiLep.Get(prefix + region + "_" + mcTag)
 
         if (not obsQCD) or (not obsWjet) or (not obsTTbar) or (not obsTTbarSemiLep):
             print("Error: one of the MC histograms is None. Check the input files and histogram names.")
@@ -383,20 +333,16 @@ def main(argv):
             obs.Add(obsTTbar)
             obs.Add(obsTTbarSemiLep)
 
-
-    
-    if (region=="8fp9"): C_mass = ifile.Get("mass_regionC_3fp8_" + labelName) #C_mass = ifile.Get("mass_regionD_8fp9_" + labelName)
-    else: C_mass = ifile.Get("mass_obs_" + region)
     pred_noSyst = addSyst(pred,0.0)
 
 
-    ifileGl2400 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/Gluino_Run3_MET_madgraph_2400_V" + Vsignal + "_weighted.root")
-    m_Gl2400 = ifileGl2400.Get("METanalysis_TestPUppiMETCut_" + option + eta + "_" + region + "_SignalMass_nominal")
     ifileGl2000 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/Gluino_Run3_MET_madgraph_2000_V" + Vsignal + "_weighted.root")
-    m_Gl2000 = ifileGl2000.Get("METanalysis_TestPUppiMETCut_" + option + eta + "_" + region + "_SignalMass_nominal")
+    m_Gl2000 = ifileGl2000.Get(mcTag + "_" + region + "_SignalMass_nominal")
+    ifileGl2400 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/Gluino_Run3_MET_madgraph_2400_V" + Vsignal + "_weighted.root")
+    m_Gl2400 = ifileGl2400.Get(mcTag + "_" + region + "_SignalMass_nominal")
     ifileGl2600 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/Gluino_Run3_MET_madgraph_2600_V" + Vsignal + "_weighted.root")
-    m_Gl2600 = ifileGl2600.Get("METanalysis_TestPUppiMETCut_" + option + eta + "_" + region + "_SignalMass_nominal")
-
+    m_Gl2600 = ifileGl2600.Get(mcTag + "_" + region + "_SignalMass_nominal")
+    
     if (not m_Gl2400) or (not m_Gl2000) or (not m_Gl2600):
         print("Error: one of the signal histograms is None. Check the input files and histogram names.")
         sys.exit(1)
@@ -404,7 +350,9 @@ def main(argv):
 
 
     # -------------- Work on histograms --------------
-    rebinning=array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
+    rebinning = array.array('d',[0.,20.,40.,60.,80.,100.,120.,140.,160.,180.,200.,220.,240.,260.,
+                                 280.,300.,320.,340.,360.,380.,410.,440.,480.,530.,590.,660.,760.,
+                                 880.,1030.,1210.,1440.,1730.,2000.,2500.,3200.,4000.])
 
 
     sizeRebinning = len(rebinning)-1
@@ -413,7 +361,6 @@ def main(argv):
         pred        = pred.Rebin(sizeRebinning,"pred_new",rebinning)
         pred_noSyst = pred_noSyst.Rebin(sizeRebinning,"pred_noSyst_new",rebinning)
         obs         = obs.Rebin(sizeRebinning,"obs_new",rebinning)
-        C_mass      = C_mass.Rebin(sizeRebinning,"C_mass_new",rebinning)
 
     if isMC and doRebin:
         obsQCD   = obsQCD.Rebin(sizeRebinning,  "obsQCD_new",   rebinning)
@@ -421,10 +368,14 @@ def main(argv):
         obsTTbar = obsTTbar.Rebin(sizeRebinning,"obsTTbar_new", rebinning)
         obsTTbarSemiLep = obsTTbarSemiLep.Rebin(sizeRebinning,"obsTTbarSemiLep_new", rebinning)
 
-    normSignal = 1.
-    if(year=="2024"):
-        if (era=="F"): normSignal = 25.40/100
-        elif (era=="G"): normSignal = 34.4/100
+
+    # Luminosite integree (fb-1) par periode ; les echantillons signal sont
+    # generes pour 100 fb-1.
+    LUMI = {"": 109.0, "F": 25.40, "G": 34.4}
+    if year != "2024":
+        raise RuntimeError("Luminosite non definie pour l'annee " + year)
+    lumi = LUMI[era]
+    normSignal = lumi / 109.0
     
     if (PlotSignal):
         m_Gl2400.Scale(normSignal)
@@ -443,33 +394,29 @@ def main(argv):
     obs_noBlind = obs.Clone("_obsnoBlind")
 
 
-
-    ifileSyst = None
-    if (region=="8fp9" and not ("MET" in inputfile)):
-        print("faire les syst d'abord !")
-    if (not nominalOnly):
-        if (("MET" in inputfile) and ("/Eta2p4/" in inputfile)):
-            ifileSyst = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta2p4/SystCombined/sysTotBinned_2024_" + region + ".root")
-        elif (("MET" in inputfile) and ("/Eta1_2p4/" in inputfile)):
-            ifileSyst = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta1_2p4/SystCombined/sysTotBinned_2024_" + region + ".root")
-        elif (("MET" in inputfile) and ("/Eta1/" in inputfile)):
-            ifileSyst = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros/DataMET_2024_V12p24__" + region + "/Eta1/SystCombined/sysTotBinned_2024_" + region + ".root")
-
-        if (ifileSyst is None):
-            raise RuntimeError(f"Aucun fichier syst trouvé pour region='{region}', inputfile='{inputfile}'")
-        print(" syst. file: ", ifileSyst.GetName())
+    if not nominalOnly:
+        if not systfile:
+            raise RuntimeError("--syst demande mais --systfile est vide")
+        ifileSyst = ROOT.TFile(systfile)
+        if ifileSyst.IsZombie():
+            raise RuntimeError("Fichier de systematiques illisible : " + systfile)
+        print(" syst. file: " + systfile)
 
         histoOfSyst = ifileSyst.Get("systTotalBinned")
+        if not histoOfSyst:
+            raise RuntimeError("'systTotalBinned' absent de " + systfile)
 
         (pred, predD, predU) = addHSyst(pred, histoOfSyst, pred_noCorrBias)
-        (pred_noBlind, pred_noBlindU, pred_noBlindD) = addHSyst(pred_noBlind, histoOfSyst, pred_noCorrBias)
+        (pred_noBlind, pred_noBlindU, pred_noBlindD) = addHSyst(
+            pred_noBlind, histoOfSyst, pred_noCorrBias)
     else:
-        print(" /!\ only nominal")
-
-        syst_stat, histoOfSystnom = getNominalSyst(ifile, "mass_predBC_", region, sizeRebinning, rebinning)
+        print(" /!\\ only nominal")
+        histoOfSystnom = getNominalSyst(ifile, "mass_predBC_", region,
+                                        sizeRebinning, rebinning)
         (pred, predD, predU) = addHSyst(pred, histoOfSystnom, pred_noCorrBias)
-        (pred_noBlind, pred_noBlindU, pred_noBlindD) = addHSyst(pred_noBlind, histoOfSystnom, pred_noCorrBias)
-
+        (pred_noBlind, pred_noBlindU, pred_noBlindD) = addHSyst(
+            pred_noBlind, histoOfSystnom, pred_noCorrBias)
+        
     err_obs_m300 = ctypes.c_double(0)
     obs_m300 = obs_noBlind.IntegralAndError(obs_noBlind.FindBin(300), obs_noBlind.GetNbinsX()+1, err_obs_m300)
     err_obs_m300 = err_obs_m300.value
@@ -486,7 +433,6 @@ def main(argv):
         max_mass=2500
 
     underflowAndOverflow(obs,True, max_mass)
-    underflowAndOverflow(C_mass,True, max_mass)
     underflowAndOverflow(pred, False, max_mass) 
     underflowAndOverflow(pred_noSyst, False, max_mass) 
 
@@ -521,50 +467,17 @@ def main(argv):
             stackMC.Add(obsTTbarSemiLep)
             stackMC.Add(obsQCD)
     
-
-
-
-    # Stat. tests
-    # h_ch2 = ROOT.TH1F("chi2",";#chi^{2};",100,0,200)
-    # h_kolmo = ROOT.TH1F("KS",";Kolmogorov-Smirnov test;",100,0,1e-1)
-    # h_ch2, h_kolmo = PE_Pred(obs, pred, 10000)
-
-    # KSTEST = obs.KolmogorovTest(pred)
-    # print('Kolmogorov test: ', KSTEST)
-
-    # pull = pullOfHisto(obs,pred,0.)
-    # empty = pull.Clone("empty")
-    # for i in range(pull.GetNbinsX()):
-    #     empty.SetBinContent(i,0)
-    #     empty.SetBinError(i,0)
-
-    # Chi2ObsPred = obs.Chi2Test(pred,"UWP")
-    # print("Chi2 between prediction and observation  = {}".format(Chi2ObsPred))
-
-    # Chi2OfPull =  pull.Chi2Test(empty, "UU")
-    # print("Chi2 of the pull plot = {}".format(Chi2OfPull))
-    #
-    
-
-
     
     ratioSimpleH    = ratioHisto(obs,pred)
-    ratio_massC_obs = ratioHisto(C_mass,pred)
-
     pull  = pullOfHisto(obs,pred,0.)
-    pullC = pullOfHisto(C_mass,pred,0.)
-
     ratioInt  = ratioIntegral(obs,    pred, 0., max_mass)
-    ratioIntC = ratioIntegral(C_mass, pred, 0., max_mass)
 
     if (blind):
         ratioInt  = ratioIntegral(obs,    pred, 0., 300)
-        ratioIntC = ratioIntegral(C_mass, pred, 0., 300) 
 
     if(isBinWidth):
         obs = binWidth(obs)
         pred = binWidth(pred)
-        C_mass = binWidth(C_mass)
         pred_noSyst = binWidth(pred_noSyst)
         if (PlotSignal):
             m_Gl2400 = binWidth(m_Gl2400)
@@ -577,21 +490,16 @@ def main(argv):
 
     if blind:
         obs_blind       = obs.Clone("obs_blind")
-        C_mass_blind    = C_mass.Clone("C_mass_blind")
         ratioInt_blind  = ratioInt.Clone("ratioInt_blind")
-        ratioIntC_blind = ratioIntC.Clone("ratioIntC_blind")
         ratioSimpleH_blind   = ratioSimpleH.Clone("ratioSimpleH_blind")
-        ratio_massC_blind    = ratio_massC_obs.Clone("ratio_massC_blind")
         pull_blind  = pull.Clone("pull_blind")
-        pullC_blind = pullC.Clone("pullC_blind")
-        for h in [obs_blind, C_mass_blind, ratioInt_blind, ratioIntC_blind,
-                  ratioSimpleH_blind, ratio_massC_blind, pull_blind, pullC_blind]:
+        for h in [obs_blind, ratioInt_blind, ratioSimpleH_blind, pull_blind]:
             blindAnyUp(h, mass_fit)
     else:
-        obs_blind, C_mass_blind        = obs, C_mass
-        ratioInt_blind, ratioIntC_blind = ratioInt, ratioIntC
-        ratioSimpleH_blind, ratio_massC_blind = ratioSimpleH, ratio_massC_obs
-        pull_blind, pullC_blind        = pull, pullC
+        obs_blind          = obs
+        ratioInt_blind     = ratioInt
+        ratioSimpleH_blind = ratioSimpleH
+        pull_blind         = pull
 
     # -------------- Display --------------
        
@@ -630,11 +538,6 @@ def main(argv):
 
     t1.cd()
 
-    min_entries=pred.GetBinContent(pred.FindBin(max_mass)-1)/10
-    if(doRebin==False):
-        min_entries=1e-6
-    max_entries=pred.GetMaximum()*100
-
     min_entries = 1e-3
     max_entries = 2e5
 
@@ -663,7 +566,6 @@ def main(argv):
     pred_band.GetXaxis().SetTitle("")
     pred_band.GetXaxis().SetLabelSize(0)
     pred_band.Draw("same E5")
-    pred_band.SaveAs(odir+'/predband.root')
 
 
     if isMC:
@@ -689,7 +591,6 @@ def main(argv):
     pred_band_noSyst.GetYaxis().SetRangeUser(min_entries,max_entries)
     pred_band_noSyst.GetXaxis().SetTitle("")
     pred_band_noSyst.Draw("same E5")
-    pred_band_noSyst.SaveAs(odir+'/predband_nosyst.root')
 
     pred.SetMarkerStyle(21)
     pred.SetMarkerColor(2)
@@ -697,7 +598,6 @@ def main(argv):
     pred.SetLineColor(2)
     pred.SetFillColor(0)
     pred.Draw("same HIST P")
-    pred.SaveAs(odir+'/pred.root')
 
     obs_blind.SetMarkerStyle(20)
     obs_blind.SetMarkerColor(1)
@@ -706,9 +606,6 @@ def main(argv):
     obs_blind.SetFillColor(0)
     obs_blind.GetXaxis().SetRange(min_mass,max_mass)
     obs_blind.GetXaxis().SetRangeUser(min_mass,max_mass)
-    C_mass_blind.SetMarkerColor(8)
-    C_mass_blind.SetLineColor(8)
-    C_mass_blind.SetMarkerStyle(23)
     if (region=="3fp8"): 
         obs_blind.SetMarkerColor(8)
         obs_blind.SetLineColor(8)
@@ -718,10 +615,6 @@ def main(argv):
         m_Gl2400.Draw("same hist")
         m_Gl2000.Draw("same hist")
         m_Gl2600.Draw("same hist")
-    #if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
-    #    C_mass_blind.Draw("same E1")
-
-    obs_blind.SaveAs(odir+'/obs_blind.root')
     
 
     leg=TLegend(0.65,0.5 if PlotSignal else 0.6,1.1,1)
@@ -729,15 +622,10 @@ def main(argv):
     leg.SetBorderSize(0)
     leg.SetTextFont(43)
     leg.SetTextSize(16)
-    # if (labelRegion == "8fp9"): leg.SetHeader("Validation Region: 0.8< F_{pixel}\leq0.9")
-    # elif (labelRegion == "9fp10"): leg.SetHeader("Signal Region: 0.9< F_{pixel}\leq1.0")
-    # else: leg.SetHeader("Region : " + labelRegion)
 
-    tex1 = ROOT.TLatex(0.85, 0.96, "")
-    if (year == "2024"):
-        if (not isMC): tex1 = ROOT.TLatex(0.68, 0.96, "109 fb^{-1} (13.6 TeV)")
-        if (era == "F"): tex1 = ROOT.TLatex(0.63, 0.96, "2024F - 25.40 fb^{-1} (13.6 TeV)")
-        if (era == "G"): tex1 = ROOT.TLatex(0.63, 0.96, "2024G - 34.4 fb^{-1} (13.6 TeV)")
+    lumiText = "{:.4g} fb^{{-1}} (13.6 TeV)".format(lumi)
+    if era: lumiText = year + era + " - " + lumiText
+    tex1 = ROOT.TLatex(0.63 if era else 0.68, 0.96, lumiText)
     tex1.SetNDC()
     tex1.SetTextFont(42)
     tex1.SetLineWidth(2)
@@ -745,7 +633,6 @@ def main(argv):
     c1.cd()
     tex1.Draw()
 
-    #tex2 = ROOT.TLatex(0.15, 0.96, "#scale[1.3]{#bf{CMS}}#it{Work in progress}")
     tex2 = ROOT.TLatex(0.15, 0.96, "#it{Private work (CMS data)}")
     if (isMC): tex2 = ROOT.TLatex(0.15, 0.96, "#it{Private work (CMS simulation)}")
     tex2.SetNDC()
@@ -756,7 +643,7 @@ def main(argv):
     tex2.Draw()
 
     tex3 = ROOT.TLatex(0.18, 0.92, "#bf{Validation Region: 0.8< F_{pixel}\leq0.9}")
-    if (labelRegion == "9fp10"): tex3 = ROOT.TLatex(0.18, 0.92, "#bf{Signal Region: 0.9< F_{pixel}#leq1.0}")
+    if (region == "9fp10"): tex3 = ROOT.TLatex(0.18, 0.92, "#bf{Signal Region: 0.9< F_{pixel}#leq1.0}")
     tex3.SetNDC()
     tex3.SetTextFont(42)
     tex3.SetTextSize(0.03)
@@ -782,8 +669,6 @@ def main(argv):
 
     if (region=="3fp8"): leg.AddEntry(obs_blind, "Observed in C", "PE1")
     else: leg.AddEntry(obs_blind, "Observed", "PE1")
-    #if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
-        #leg.AddEntry(C_mass_blind, "Observed in C", "PE1")
     
     entry=leg.AddEntry(pred_leg,"Data-based pred.","PF")
     entry.SetFillColor(5)
@@ -810,11 +695,6 @@ def main(argv):
         leg.AddEntry(m_Gl2600,"#tilde{g} (M=2600 GeV)","l")
 
     
-
-
-    LineLastBin=TLine(obs_blind.GetBinLowEdge(obs_blind.FindBin(max_mass)-1),0,obs_blind.GetBinLowEdge(obs_blind.FindBin(max_mass)-1),max_entries)
-    LineLastBin.SetLineStyle(3)
-    LineLastBin.SetLineColor(1)
 
     LineFit1=TLine(mass_fit, min_entries, mass_fit, max_entries)
     LineFit1.SetLineStyle(1)
@@ -855,16 +735,11 @@ def main(argv):
         ratioInt_blind.SetMarkerSize(0.7)
         ratioInt_blind.SetLineColor(1)
         ratioInt_blind.SetFillColor(0)
-        ratioIntC_blind.SetMarkerStyle(23)
-        ratioIntC_blind.SetMarkerColor(8)
-        ratioIntC_blind.SetLineColor(8)
         if (region=="3fp8"):
             ratioInt_blind.SetMarkerColor(8)
             ratioInt_blind.SetLineColor(8)
             ratioInt_blind.SetMarkerStyle(23)
         ratioInt_blind.Draw("same E0")
-        # if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
-        #     ratioIntC_blind.Draw("same E0")
 
         LineAtOne.Draw("same")
 
@@ -904,9 +779,6 @@ def main(argv):
     ratioSimpleH_blind.SetMarkerSize(0.7)
     ratioSimpleH_blind.SetLineColor(1)
     ratioSimpleH_blind.SetFillColor(0)
-    ratio_massC_blind.SetMarkerStyle(23)
-    ratio_massC_blind.SetMarkerColor(8)
-    ratio_massC_blind.SetLineColor(8)
     if (region=="3fp8"):
         ratioSimpleH_blind.SetMarkerColor(8)
         ratioSimpleH_blind.SetLineColor(8)
@@ -914,9 +786,6 @@ def main(argv):
 
 
     ratioSimpleH_blind.Draw("same E0")
-    # if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
-    #     ratio_massC_blind.Draw("same E0")
-    #ratioSimpleH_blind.Draw("same E0")
     ratioSimpleH_blind.GetXaxis().SetRange(min_mass,max_mass)
     ratioSimpleH_blind.GetXaxis().SetRangeUser(min_mass,max_mass)
 
@@ -959,16 +828,12 @@ def main(argv):
     frameR3.Draw("AXIS")
 
     pull_blind.Draw("same HIST")
-    # if (region == "8fp9" and not ("NoC" in outputfile) and not ("MET" in inputfile)):
-    #     pullC_blind.Draw("same HIST")
 
     pull_blind.SetLineColor(1)
     pull_blind.SetFillColor(38)
     if (region=="3fp8"):
         pull_blind.SetFillColorAlpha(8, 0.35)
         pull_blind.SetLineColor(8)
-    pullC_blind.SetLineColor(8)
-    pullC_blind.SetFillColorAlpha(8, 0.35)
     t4.RedrawAxis()
     t4.RedrawAxis("G")
 
@@ -1023,5 +888,4 @@ def main(argv):
 
 if __name__ == "__main__":
 
-    odir = sys.argv[8]
     (reg, obs_m300, pred_m300, err_obs_m300, err_pred_m300) = main(sys.argv[1:])

@@ -70,7 +70,7 @@ The calibration constants `K_mass` and `C_mass` used in the mass formula are def
 | `LaunchBkgOnAllSyst.py` | Launcher — runs **all** configurations (nominal + every systematic variation) sequentially. |
 | `configFile_readHist_template.txt` | Template of the configuration line, filled in by the launchers via `sed`. |
 | `step2_backgroundPrediction.C` | Main ROOT macro: reads the configuration, loads the regions, runs the estimate. |
-| `Regions.h` | `Region` class (histogram container), mass formula, template correction functions, and the core `fillPredMass` convolution. |
+| `Regions.h` | `Region` class (histogram container), mass formula, template correlation correction functions, and the core `fillPredMass` convolution. |
 | `CommonFunctions.h` | Helpers (rebinning, η reweighting, Poisson toys, mean/RMS over toys) and the `bckgEstimate` driver that loops over the pseudo-experiments. |
 | `MyShowPred.py` | Wrapper that calls `MyMacroMass.py` on **data**. |
 | `MyShowPred_MC.py` | Same, for **MC** samples (stacked W+jets / tt̄ / QCD). |
@@ -194,7 +194,7 @@ one at a time. It takes several hours — launch it inside a `screen`/`tmux` ses
 One ROOT file per configuration, named from the full input path plus the configuration:
 
 ```
-<input_path>_rebinEta4_rebinIh4_rebinP2_EtaReweighting_<etaName>_OldFit_IhC.root
+<input_path>_rebinEta<rebinEta>_rebinIh<rebinIh>_rebinP<rebinMom>_EtaReweighting_<etaName>_OldFit_IhC.root
 ```
 
 with `_corrTemplateIh`, `_corrTemplate1oP`, `_fitIhUp/Down`, `_fitPUp/Down` inserted for the
