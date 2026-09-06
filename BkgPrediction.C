@@ -153,7 +153,6 @@ void BkgPrediction(const char* configPath = "configFile_readHisto_toLaunch.txt")
     const std::string etaRange     = cfg.str("etaRange",   "Eta1");
     const std::string eopCut       = cfg.str("eopCut",     "");
     const std::string sigPtCut     = cfg.str("sigmaPtCut", "");
-    const std::string ihLabel      = cfg.str("ihLabel",    "");
     const bool        useOldIhFit  = cfg.getBool("useOldIhFit",  false);
     const bool        useOld1oPFit = cfg.getBool("useOld1oPFit", true);
     const bool        saveFits     = cfg.getBool("saveFits",     false);
@@ -188,12 +187,10 @@ void BkgPrediction(const char* configPath = "configFile_readHisto_toLaunch.txt")
     if (!sigPtCut.empty()) Ext += "_SigmaPtoverPt_" + sigPtCut;
     if (!eopCut.empty())   Ext += "_EoP_" + eopCut;
     Ext += "_" + etaRange;
-    if (!ihLabel.empty())  Ext += "_" + ihLabel;
 
     std::string etaName = "_" + etaRange;
     if (!sigPtCut.empty()) etaName += "_SigmaPtoverPt_" + sigPtCut;
     if (!eopCut.empty())   etaName += "_EoP_" + eopCut;
-    if (!ihLabel.empty())  etaName += "_" + ihLabel;
 
     // Output name: <dataset>_<etaName>_<label>
     // The label comes from the launcher, it identifies the systematic on its own.
