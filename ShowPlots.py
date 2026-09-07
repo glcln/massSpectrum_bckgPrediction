@@ -1,10 +1,10 @@
 #!/usr/bin/python
 """Runs the mass spectrum plotting (MyMacroMass.py).
 
-    py ShowPlots.py
-    py ShowPlots.py --etas Eta1,Eta1_2p4,Eta2p4
-    py ShowPlots.py --label binEtaUp
-    py ShowPlots.py --syst
+    python3 ShowPlots.py
+    python3 ShowPlots.py --etas Eta1,Eta1_2p4,Eta2p4
+    python3 ShowPlots.py --label binEtaUp
+    python3 ShowPlots.py --syst
 """
 
 # =============================================================================

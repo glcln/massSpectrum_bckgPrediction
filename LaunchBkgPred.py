@@ -1,8 +1,8 @@
 """Runs the background estimate.
 
-    python LaunchBkgPred.py              -> only nominal
-    python LaunchBkgPred.py --all        -> all systematics
-    python LaunchBkgPred.py --only etaup,ihdown
+    python3 LaunchBkgPred.py              -> only nominal
+    python3 LaunchBkgPred.py --all        -> all systematics
+    python3 LaunchBkgPred.py --only etaup,ihdown
 """
 
 # =============================================================================
@@ -46,7 +46,7 @@ datasetList = [
 # Root of the directory tree the outputs are filed into, plus the pieces used to
 # build the sub-directory names.
 outputDir      = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros"
-etaRangeName   = "Eta2p4"
+etaRangeName   = "Eta1"
 sampleTypeName = "data2024"
 labelDir       = "v2"
 
@@ -96,10 +96,10 @@ common = dict(
     takeAbsEta      = 0,
 
     # Validation region 0.8 < Fpixel <= 0.9, unblinded. 0|1
-    runVR           = 1,
+    runVR           = 0,
 
     # Search region 0.9 < Fpixel <= 1.0, blinded above 300 GeV. 0|1
-    runSR           = 0,
+    runSR           = 1,
     # runVR and runSR write into the SAME file (_8fp9 / _9fp10 suffixes on the
     # histogram names). Set both to 1 to get them together: in two separate
     # passes the second overwrites the first (RECREATE).
