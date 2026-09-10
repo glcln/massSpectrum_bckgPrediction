@@ -19,6 +19,12 @@ script. **Nothing in the C++ ever has to be edited to change a configuration.**
 
 ---
 
+## 0. Disclaimer
+
+I wrote all the code in this project myself. However, this README and the comments in the scripts were generated using Claude.
+
+---
+
 ## 1. Method in a nutshell
 
 The prediction relies on an **ABCD method** in the two-dimensional plane (`Fpixel`, `pT`), which are

@@ -357,7 +357,7 @@ def main(argv):
                                               "vsignal=", "isTTbar=",
                                               "year=", "era="])
     except getopt.GetoptError:
-        print("MyMacroMass.py --ifile <f> --cuts <c> --ofile <o> --region <r> "
+        print("PlottingMacro.py --ifile <f> --cuts <c> --ofile <o> --region <r> "
               "--odir <d> --nom <bool> --eta <e> --isMC <bool> --systfile <f> "
               "[--vsignal <v>] [--isTTbar <bool>] [--year <y>] [--era <e>]")
         sys.exit(2)
@@ -462,8 +462,10 @@ def main(argv):
     ifileGl2000 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/Gluino_Run3_MET_madgraph_2000_V" + Vsignal + "_weighted.root")
     m_Gl2000 = ifileGl2000.Get(mcTag + "_" + region + "_SignalMass_nominal")
     ifileGl2400 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/Gluino_Run3_MET_madgraph_2400_V" + Vsignal + "_weighted.root")
+    #ifileGl2400 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Stau_V20/Stau_Run3_MET_871_V20p0_weighted.root")
     m_Gl2400 = ifileGl2400.Get(mcTag + "_" + region + "_SignalMass_nominal")
     ifileGl2600 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Gluino_V19/Gluino_Run3_MET_madgraph_2600_V" + Vsignal + "_weighted.root")
+    #ifileGl2600 = ROOT.TFile("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/Stop_V21/Stop_Run3_MET_madgraph_1800_V21p0_weighted.root")
     m_Gl2600 = ifileGl2600.Get(mcTag + "_" + region + "_SignalMass_nominal")
     
     if (not m_Gl2400) or (not m_Gl2000) or (not m_Gl2600):
@@ -865,6 +867,8 @@ def main(argv):
         leg.AddEntry(m_Gl2000,"#tilde{g} (M=2000 GeV)","l")
         leg.AddEntry(m_Gl2400,"#tilde{g} (M=2400 GeV)","l")
         leg.AddEntry(m_Gl2600,"#tilde{g} (M=2600 GeV)","l")
+        #leg.AddEntry(m_Gl2400,"#tilde{#tau}_{L,R} (M=871 GeV)","l")
+        #leg.AddEntry(m_Gl2600,"#tilde{t} (M=1800 GeV)","l")
 
     
 
