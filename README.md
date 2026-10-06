@@ -101,6 +101,7 @@ in `GetDeDxCalib()` (`Regions.h`):
 | `mc2017` | 2.48 | 3.19 |
 | `mc2018` | 2.49 | 3.19 |
 | `mc2024` | 2.83894 | 3.01756 |
+| `ttbar2024` | 2.83894 | 3.01756 |
 
 An unknown key falls back to the 2024 data constants **with a warning only**, so always check that
 `sampleType` matches the dataset: reading MC with the data calibration shifts the whole mass

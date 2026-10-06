@@ -39,15 +39,16 @@ parser.add_option("--only", dest="only", default=None,
 # The second element is what selects (K, C) in GetDeDxCalib, so it must track the
 # first: reading MC with the data calibration silently biases the mass spectrum.
 datasetList = [
-    ("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35", "data2024"),
+    #("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35", "data2024"),
     #("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/HistForBkg_MC_V3", "mc2024"),
+    ("/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/TTbar2024_V15/TTbar2024_V15p10", "ttbar2024"),
 ]
 
 # Root of the directory tree the outputs are filed into, plus the pieces used to
 # build the sub-directory names.
 outputDir      = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros"
-etaRangeName   = "Eta1_2p4"
-sampleTypeName = "data2024"
+etaRangeName   = "Eta2p4"
+sampleTypeName = "ttbar2024"
 labelDir       = "v2"
 
 # Settings shared by every launch of this session.
@@ -61,7 +62,7 @@ common = dict(
     rebin           = 1,
 
     # dE/dx calibration (K, C) used for M = sqrt((Ih-C)/K) * p.
-    # data2017 | data2018 | data2024 | mc2017 | mc2018 | mc2024
+    # data2017 | data2018 | data2024 | mc2017 | mc2018 | mc2024 | ttbar2024
     # Must match the dataset: MC read with the data calibration gives a wrong
     # mass spectrum, with no warning whatsoever.
     sampleType      = sampleTypeName,
@@ -71,10 +72,10 @@ common = dict(
     etaRange        = etaRangeName,
 
     # step1 E/p cut. "" (no cut) | "0p1"
-    eopCut          = "0p1",
+    eopCut          = "",
 
     # step1 sigma(pT)/pT cut. "" (no cut) | "0p5"
-    sigmaPtCut      = "0p5",
+    sigmaPtCut      = "",
 
     # Shape of the Ih template fit. 0|1
     #   0 = Gaussian fitted from 1.1 * max

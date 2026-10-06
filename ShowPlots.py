@@ -35,11 +35,12 @@ BASE = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros"
 # produced and the version (whatever follows "_V").
 DATASET    = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35"
 #DATASET    = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/HistForBkg_MC_V3"
-SAMPLETYPE = "data2024"   # data2017|data2018|data2024|mc2017|mc2018|mc2024
+#DATASET     = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/TTbar2024_V15/TTbar2024_V15p10"
+SAMPLETYPE = "data2024"   # data2017|data2018|data2024|mc2017|mc2018|mc2024|ttbar2024
 SUFFIX     = "v2"         # free-form suffix of the working directory
-CUTS       = "_SigmaPtoverPt_0p5_EoP_0p1"#_SigmaPtoverPt_0p5_EoP_0p1"           # step1 selection: "" | "_SigmaPtoverPt_0p5_EoP_0p1" | ...
+CUTS       = ""#_SigmaPtoverPt_0p5_EoP_0p1"           # step1 selection: "" | "_SigmaPtoverPt_0p5_EoP_0p1" | ...
 VSIGNAL    = "19p12"   # version of the gluino samples
-REGION     = "8fp9"
+REGION     = "9fp10"
 YEAR       = "2024"
 ERA        = ""        # "" | "F" | "G"
 ISTTBAR    = False     # MC: plot the dileptonic ttbar only
@@ -94,7 +95,7 @@ if not m:
 version = m.group(1)
 
 # The sample type is enough to know whether we are plotting MC.
-isMC  = SAMPLETYPE.startswith("mc")
+isMC  = SAMPLETYPE.startswith("mc") or SAMPLETYPE.startswith("ttbar")
 # Working directory, matching what the launcher built when it filed the outputs:
 # <sampleType>_V<version>__<region><cuts>_<suffix>
 indir = "{}/{}_V{}__{}{}_{}".format(BASE, SAMPLETYPE, version, REGION, cuts, suffix)

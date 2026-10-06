@@ -473,6 +473,11 @@ def main(argv):
         sys.exit(1)
 
 
+    if (isTTbar):
+        pred.Scale(obs.Integral()/pred.Integral())
+        pred_noSyst.Scale(obs.Integral()/pred_noSyst.Integral())
+
+
 
     # -------------- Work on histograms --------------
     # Analysis mass binning: fine at low mass, growing towards the tail so every
@@ -697,7 +702,7 @@ def main(argv):
 
     # Fixed log-scale range, so plots of different eta ranges can be compared
     # side by side.
-    min_entries = 1e-3
+    min_entries = 1e-2
     max_entries = 2e5
 
     titleYaxis = "Events / bin"
@@ -748,13 +753,13 @@ def main(argv):
     pred_band_noSyst.SetMarkerColor(5)
     pred_band_noSyst.SetMarkerSize(0.1)
     pred_band_noSyst.SetLineColor(5)
-    pred_band_noSyst.SetFillColorAlpha(5,0.8)
+    pred_band_noSyst.SetFillColorAlpha(5,1)
     pred_band_noSyst.SetFillStyle(1001)
     pred_band_noSyst.GetXaxis().SetRange(min_mass,max_mass)
     pred_band_noSyst.GetXaxis().SetRangeUser(min_mass,max_mass)
     pred_band_noSyst.GetYaxis().SetRangeUser(min_entries,max_entries)
     pred_band_noSyst.GetXaxis().SetTitle("")
-    pred_band_noSyst.Draw("same E5")
+    #pred_band_noSyst.Draw("same E5")
 
     # Central value of the prediction, as red markers over the bands.
     pred.SetMarkerStyle(21)
@@ -762,6 +767,7 @@ def main(argv):
     pred.SetMarkerSize(1)
     pred.SetLineColor(2)
     pred.SetFillColor(0)
+    pred_band.Draw("same E5")
     pred.Draw("same HIST P")
 
     # Observation: black points with error bars, blinded above 300 GeV in the
@@ -993,7 +999,7 @@ def main(argv):
     frameR3.SetStats(0)
     frameR3.GetXaxis().SetTitle("Mass (GeV)")
     frameR3.GetYaxis().SetTitleOffset(1.4)
-    frameR3.GetYaxis().SetTitle("#frac{M_{obs}-M_{pred}}{#sigma}") if doYouWantRratio else frameR3.GetYaxis().SetTitle("#frac{M_{obs}-M_{pred}}{#sigma} ")
+    frameR3.GetYaxis().SetTitle("#frac{obs-pred}{#sigma}") if doYouWantRratio else frameR3.GetYaxis().SetTitle("#frac{obs-pred}{#sigma} ")
     frameR3.GetYaxis().SetTickLength(frameR3.GetYaxis().GetTickLength()*2)
     frameR3.SetMaximum(3)
     frameR3.SetMinimum(-3)

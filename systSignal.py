@@ -253,12 +253,14 @@ def systTotal(list_h, name):
     return res
 
 
-def lowEdge(h):
-    # One marker per bin at its lower edge: on this very non-uniform binning a
-    # TH1 staircase is harder to read than a scatter of points.
-    g = ROOT.TGraph(h.GetNbinsX())
+def binCenters(h):
+    # Un marker au centre de chaque bin non vide, sans barre.
+    g = ROOT.TGraph()
     for i in range(1, h.GetNbinsX() + 1):
-        g.SetPoint(i - 1, h.GetBinLowEdge(i), h.GetBinContent(i))
+        c = h.GetBinContent(i)
+        if c <= 0:
+            continue
+        g.SetPoint(g.GetN(), h.GetBinCenter(i), c)
     return g
 
 
@@ -433,11 +435,11 @@ def plotSummary(entries, total, xtitle, outDir, eta, mass):
     frame.GetYaxis().SetTitle("Systematic Uncertainty [%]")
     frame.GetXaxis().SetNdivisions(510)
     frame.GetXaxis().SetLabelFont(43)
-    frame.GetXaxis().SetLabelSize(22)
+    frame.GetXaxis().SetLabelSize(24)
     frame.GetXaxis().SetTitleSize(0.05)
     frame.GetXaxis().SetTitleOffset(1.0)
     frame.GetYaxis().SetLabelFont(43)
-    frame.GetYaxis().SetLabelSize(22)
+    frame.GetYaxis().SetLabelSize(24)
     frame.GetYaxis().SetTitleSize(0.05)
     frame.GetYaxis().SetTitleOffset(1.0)
     frame.Draw("AXIS")
@@ -445,16 +447,15 @@ def plotSummary(entries, total, xtitle, outDir, eta, mass):
 
     leg = TLegend(0.22, 0.75, 0.6, 0.93)
     leg.SetNColumns(2)
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(0)
+    leg.SetBorderSize(1)
 
     # `graphs` prevents the TGraphs from being collected before SaveAs.
     graphs = []
-    gTot = setColorAndMarker(lowEdge(total), ROOT.kRed, 34)
-    leg.AddEntry(gTot, "Total", "PE1")
+    gTot = setColorAndMarker(binCenters(total), ROOT.kRed, 34)
+    leg.AddEntry(gTot, "Total", "P")
     for (h, legend, color, marker) in entries:
-        g = setColorAndMarker(lowEdge(h), color, marker)
-        leg.AddEntry(g, legend, "PE1")
+        g = setColorAndMarker(binCenters(h), color, marker)
+        leg.AddEntry(g, legend, "P")
         g.Draw("P")
         graphs.append(g)
     gTot.Draw("P")                 # last, so the total sits on top
@@ -521,11 +522,11 @@ def plotTotalAllMasses(dict_sysTot, xtitle, outDir, eta, outTitle="sysTot_allMas
     frame.GetYaxis().SetTitle("Total Systematic Uncertainty [%]")
     frame.GetXaxis().SetNdivisions(510)
     frame.GetXaxis().SetLabelFont(43)
-    frame.GetXaxis().SetLabelSize(22)
+    frame.GetXaxis().SetLabelSize(25)
     frame.GetXaxis().SetTitleSize(0.05)
     frame.GetXaxis().SetTitleOffset(1.0)
     frame.GetYaxis().SetLabelFont(43)
-    frame.GetYaxis().SetLabelSize(22)
+    frame.GetYaxis().SetLabelSize(25)
     frame.GetYaxis().SetTitleSize(0.05)
     frame.GetYaxis().SetTitleOffset(1.0)
     frame.Draw("AXIS")
@@ -533,7 +534,7 @@ def plotTotalAllMasses(dict_sysTot, xtitle, outDir, eta, outTitle="sysTot_allMas
 
     leg = TLegend(0.3, 0.68, 0.63, 0.93)
     leg.SetBorderSize(0)
-    leg.SetFillStyle(0)
+    #leg.SetFillStyle(0)
 
     # Sorted so the legend goes from the lightest to the heaviest mass point.
     for i, mass in enumerate(sorted(dict_sysTot)):

@@ -49,16 +49,16 @@ tdrstyle.setTDRStyle()
 # ==================================================================
 # These reproduce, by hand, the path convention built by LaunchBkgPred.py.
 BASE       = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros"
-#DATASET   = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35"
-DATASET    = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/HistForBkg_MC_V3"
-SAMPLETYPE = "mc2024"     # data2017|data2018|data2024|mc2017|mc2018|mc2024
+DATASET   = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35"
+#DATASET    = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/HistForBkg_MC_V3"
+SAMPLETYPE = "data2024"     # data2017|data2018|data2024|mc2017|mc2018|mc2024|ttbar2024
 # SUFFIX must reproduce the launcher's final labelDir, i.e. including the cut
 # prefix the launcher prepends when both eopCut and sigmaPtCut are set.
 SUFFIX     = "v2"
 # CUTS is the step1 selection as it appears inside the *file name*, not in the
 # directory name; it is inserted between the eta range and the systematic label.
 CUTS       = ""           # step1 cuts: "" | "_SigmaPtoverPt_0p5_EoP_0p1" | ...
-REGION     = "8fp9"       # 8fp9 (VR) | 9fp10 (SR)
+REGION     = "9fp10"       # 8fp9 (VR) | 9fp10 (SR)
 SYSTDIR    = "SystCombined"
 YEAR       = "2024"
 ERA        = ""           # "" (all year) | "F" | "G"
@@ -117,9 +117,6 @@ SYSTEMATICS = [
     dict(key="FitP",     down="fitMomDown",      up="fitMomUp",
          legend="p fit",              legDown="Fit p down", legUp="Fit p up",
          color=ROOT.kCyan,        marker=29, inTotal=True),
-    dict(key="NoFit",    down="noFit",           up=None,
-         legend="No fit",             legDown="No fit",     legUp="",
-         color=ROOT.kGreen + 2,   marker=20, inTotal=False),
     dict(key="CorrIh",   down="corrTemplateIh",  up=None,
          legend="corr template I_{h}", legDown="corr template I_{h}", legUp="",
          color=ROOT.kOrange,      marker=39, inTotal=True),
@@ -322,13 +319,14 @@ def systTotal(list_h, name):
     return res
 
 
-def lowEdge(h):
-    """TGraph (bin low edge, content): avoids the histogram staircase."""
-    # On a strongly non-uniform binning the staircase of a TH1 is misleading;
-    # one marker per bin, placed at its lower edge, reads much better.
-    g = ROOT.TGraph(h.GetNbinsX())
+def binCenters(h):
+    # Un marker au centre de chaque bin non vide, sans barre.
+    g = ROOT.TGraph()
     for i in range(1, h.GetNbinsX() + 1):
-        g.SetPoint(i - 1, h.GetBinLowEdge(i), h.GetBinContent(i))
+        c = h.GetBinContent(i)
+        if c <= 0:
+            continue
+        g.SetPoint(g.GetN(), h.GetBinCenter(i), c)
     return g
 
 
@@ -526,7 +524,7 @@ def plotSummary(entries, total, xtitle, outDir, outTitle, eta, sampleTag, lumiLa
     frame.SetStats(0)
     # 0.1 % to 2000 %: wide enough that a pathological variation stays on-plot.
     frame.SetMinimum(0.1)
-    frame.SetMaximum(2000)
+    frame.SetMaximum(6000)
     frame.GetXaxis().SetTitle(xtitle)
     frame.GetYaxis().SetTitle("Systematic Uncertainty [%]")
     frame.GetXaxis().SetNdivisions(510)
@@ -541,17 +539,16 @@ def plotSummary(entries, total, xtitle, outDir, outTitle, eta, sampleTag, lumiLa
     frame.Draw("AXIS")
     frame.Draw("SAME AXIG")
 
-    leg = TLegend(0.12, 0.7, 0.5, 0.93)
+    leg = TLegend(0.12, 0.7, 0.55, 0.93)
     leg.SetNColumns(2)
-    leg.SetBorderSize(0)
-    leg.SetFillStyle(0)
+    leg.SetBorderSize(1)
 
     # `graphs` keeps the TGraphs alive until SaveAs, same reason as `keep` above.
     graphs = []
-    gTot = setColorAndMarker(lowEdge(total), ROOT.kRed, 34)
+    gTot = setColorAndMarker(binCenters(total), ROOT.kRed, 34)
     leg.AddEntry(gTot, "Total", "PE1")
     for (h, legend, color, marker) in entries:
-        g = setColorAndMarker(lowEdge(h), color, marker)
+        g = setColorAndMarker(binCenters(h), color, marker)
         leg.AddEntry(g, legend, "PE1")
         g.Draw("P")
         graphs.append(g)

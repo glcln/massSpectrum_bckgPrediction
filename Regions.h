@@ -78,6 +78,7 @@ inline DeDxCalib GetDeDxCalib(const std::string& sample) {
         {"mc2017",   {2.48f,    3.19f}},
         {"mc2018",   {2.49f,    3.19f}},
         {"mc2024",   {2.83894f, 3.01756f}},
+        {"ttbar2024",   {2.83894f, 3.01756f}},
     };
     auto it = kCalib.find(sample);
     if (it == kCalib.end()) {
