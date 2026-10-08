@@ -28,7 +28,7 @@ import os, re, sys
 from optparse import OptionParser
 
 # Root of the working directories.
-BASE = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src"
+BASE = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/outputHist"
 
 # --- to be set by hand ----------------------------------------------------
 # Same path as in the step2 launcher: it gives the prefix of the .root files

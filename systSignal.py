@@ -254,7 +254,6 @@ def systTotal(list_h, name):
 
 
 def binCenters(h):
-    # Un marker au centre de chaque bin non vide, sans barre.
     g = ROOT.TGraph()
     for i in range(1, h.GetNbinsX() + 1):
         c = h.GetBinContent(i)

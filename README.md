@@ -14,6 +14,9 @@ The repository takes as input the per-region histograms produced upstream by `Tu
 3. publication-style mass-spectrum plots (observation vs. prediction, uncertainty band, signal
    overlays, ratio and pull panels).
 
+Two helper scripts additionally normalise the simulated samples (MC backgrounds and signal) to the
+integrated luminosity; their output is what the signal systematics and the plots read.
+
 Each step is driven entirely from the command line or from a small settings block at the top of a
 script. **Nothing in the C++ ever has to be edited to change a configuration.**
 
@@ -113,6 +116,8 @@ spectrum silently.
 
 | File | Role |
 | --- | --- |
+| `RescaleBKG.py` | **Step 1b.** Scales the histograms of the simulated background samples (QCD, ttbar, W+jets) to the integrated luminosity and writes them to `<sample>_weighted.root`. |
+| `RescaleSignal.py` | **Step 1b.** Same for the signal samples (gluino, stop, stau). |
 | `LaunchBkgPred.py` | **Step 2 driver.** Writes one config file per systematic variation, runs the macro on it, and files the outputs into a structured directory tree. |
 | `BkgPrediction.C` | Main ROOT macro: parses the config file, resolves the calibration and the histogram names, loads the ABCD regions, runs the estimate for the VR and/or the SR, writes one output file. |
 | `Regions.h` | `Region` class (histogram container), mass formula, dE/dx calibration table, `Fpixel`-correlation corrections, blinding, and the core `fillPredMass()` convolution. |
@@ -143,19 +148,27 @@ Cloning requires an SSH key associated with your GitHub account
 (see [connecting-to-github-with-ssh-key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)):
 
 ```bash
-git clone -b master git@github.com:dapparu/massSpectrum_bckgPrediction.git massSpectrum_bckgPrediction
+git clone -b master git@github.com:gcoulon/massSpectrum_bckgPrediction.git massSpectrum_bckgPrediction
 cd massSpectrum_bckgPrediction
 ```
 
 `DebugFit/` is created automatically when `saveFits = 1`, so nothing has to be prepared by hand.
+
+The two rescaling scripts (§5) import `tqdm` and `numpy` on top of PyROOT: both must be importable
+for the scripts to start, even though neither is actually used.
 
 ---
 
 ## 4. Overall workflow
 
 ```
-   step1 (TupleAnalysis): .root with the per-region histograms
+   step1 (TupleAnalysis): one .root per sample, with the per-region histograms
                         |
+                        +---- simulated samples only ----+
+                        |                                v
+                        |             [1b] RescaleBKG.py / RescaleSignal.py
+                        |                  -> <sample>_weighted.root, next to the input
+                        |                     (read by [3b] and [3c])
                         v
   [2]  LaunchBkgPred.py
             -> configFile_<label>.txt   (one per variation)
@@ -177,7 +190,128 @@ cd massSpectrum_bckgPrediction
 
 ---
 
-## 5. Step 2 — Running the background prediction
+## 5. Step 1b — Normalising the simulated samples to the luminosity
+
+```bash
+python3 RescaleBKG.py        # simulated backgrounds: QCD, ttbar, W+jets
+python3 RescaleSignal.py     # signal: gluino, stop, stau
+```
+
+The step 1 histograms of a simulated sample hold raw event counts. These two scripts write, for
+every input file, a copy in which each histogram is scaled to the yield expected in the 2024
+dataset:
+
+```
+w = L_int × σ / N_preTrig
+```
+
+| Term | Taken from |
+| --- | --- |
+| `L_int` | `intLumi` = 108 950 pb⁻¹ (2024) |
+| `σ` | `crossSectionArray`, in pb, looked up by the base name of the file |
+| `N_preTrig` | first bin of the `EventCutflow` histogram of that file, i.e. the number of events before the trigger |
+
+Data are never rescaled, so this step is **not** needed to run the prediction on data. It is needed
+by everything that reads a simulated sample:
+
+| Reader | `_weighted.root` files it opens |
+| --- | --- |
+| `PlottingMacro.py`, always | The three gluino overlays (2000, 2400, 2600 GeV). They are opened unconditionally, so even a data plot fails without them. |
+| `PlottingMacro.py`, MC mode | W+jets, ttbar dileptonic, ttbar semileptonic and QCD, which make up the stack and the "observation". |
+| `systSignal.py` | Every gluino mass point, unless `--raw` is given. |
+
+### 5.1 What a pass does
+
+For each file of the active list (`BackgroundSamples_HISTO` — the variable keeps that name in
+`RescaleSignal.py` too, where it holds signal files):
+
+1. the file is skipped, with a one-line message, if it does not exist, has no entry in
+   `crossSectionArray`, has no `EventCutflow`, or has an empty first cut-flow bin;
+2. the weight is computed and printed (`<file> -> nEvetsPreTrig = … -> weight = …`);
+3. `<name>_weighted.root` is written **next to the input**, opened `RECREATE`. It contains
+   - every top-level histogram scaled by `w` (all `TH1`-derived classes, `TH2` included), except
+     those whose name contains one of the `SelectionNames` tags;
+   - every other top-level object, copied unchanged;
+   - two `TParameter<double>`, `weight` and `lumi`, recording the normalisation that was applied.
+
+The input file is opened read-only and is never modified. A skipped file is not an error: the
+script exits with status 0 either way, so the printout is the only record of what was actually
+processed.
+
+### 5.2 Settings
+
+Neither script takes command-line options; everything is set in the block at the top.
+
+| Variable | Meaning |
+| --- | --- |
+| `version` | Version string inserted into **every** file name, both in the cross-section table and in the sample list (`…_V<version>….root`). |
+| `intLumi` | Integrated luminosity, in pb⁻¹. |
+| `crossSectionArray` | `{file base name: σ in pb}`. |
+| `pathBKG_*`, `pathSig*` | Step 1 output directory of each sample family. |
+| `BackgroundSamples_HISTO` | The files processed by this pass. The complete list is kept in the triple-quoted block just above it; the active list is the subset to run. |
+| `SelectionNames` | Sub-strings of histogram names to leave unscaled (e.g. `"Nm1"`, `"EventCutflow"`). Empty by default: everything is scaled. |
+
+Sample families, and the file names the scripts expect:
+
+| Script | Family | File name | Points |
+| --- | --- | --- | --- |
+| `RescaleBKG.py` | QCD (`mu`) | `QCD2024_mu_pt<range>_V<version><i>.root` | 12 pT bins, from 15 to above 1000 GeV, `<i>` = 1…12 |
+| | ttbar | `TTbar2024_V<version>.root`, `TTbarSemiLep2024_V<version>.root` | dileptonic, semileptonic |
+| | W+jets, binned | `Wjets2024_<1J\|2J>_pt<range>_V<version><i>.root` | 2 × 5 pT bins, from 40 to above 600 GeV, `<i>` = 1…10 |
+| | W+jets, inclusive | `WjetMuNu2024_V<version>.root` | — |
+| `RescaleSignal.py` | gluino | `Gluino_Run3_MET_<m>_V<version>.root` | 9 points, 1000 → 2600 GeV |
+| | gluino (MadGraph) | `Gluino_Run3_MET_madgraph_<m>_V<version>.root` | 10 points, 1100 → 2600 GeV |
+| | stop (MadGraph) | `Stop_Run3_MET_madgraph_<m>_V<version>.root` | 12 points, 700 → 2600 GeV |
+| | stau | `Stau_Run3_MET_<m>_V<version>.root` | 11 points, 247 → 1599 GeV |
+
+In the binned samples the bin index `<i>` is appended directly to the version, with no separator:
+`version = "16p3"` gives `…_pt15to20_V16p31.root`, …, `…_pt1000_V16p312.root`.
+
+**One family per pass.** `version` is a single variable, but the families were not produced at the
+same version: the files currently read by `PlottingMacro.py` are QCD `16p3`, ttbar dileptonic
+`15p10`, ttbar semileptonic `22p1`, W+jets `14p14` and gluino `19p12` (`VSIGNAL`), with stau `20p0`
+and stop `21p0` in its commented-out alternatives. So, for each family: set `version`, put the
+matching block in `BackgroundSamples_HISTO`, run, and repeat. A file whose name does not match is
+simply reported as `File not found` and skipped. As committed, `RescaleBKG.py` is set up for QCD
+(`16p3`) and `RescaleSignal.py` for the staus (`20p0`).
+
+### 5.3 Things to know
+
+- **QCD has to be merged by hand.** `RescaleBKG.py` writes one weighted file per pT bin
+  (`QCD2024_mu_pt15to20_V16p31_weighted.root`, …), while `PlottingMacro.py` reads a single
+  `QCD2024_mu_V16p3_weighted.root`. No script of this repository builds it: add the weighted bins
+  together once they exist, e.g.
+
+  ```bash
+  hadd QCD2024_mu_V16p3_weighted.root QCD2024_mu_pt*_V16p3*_weighted.root
+  ```
+
+  Always merge the **weighted** files: each bin has its own weight, so a sum of the raw files
+  cannot be rescaled afterwards.
+- **The weighted copies go stale.** They are independent files: re-running step 1 on a simulated
+  sample does not refresh them, and an outdated copy is picked up downstream without any warning.
+  Re-run the rescaling after every step 1 production.
+- **`EventCutflow` is scaled as well** with the default empty `SelectionNames`: in a weighted file
+  its first bin reads `L_int × σ`, no longer the number of generated events. Add `"EventCutflow"`
+  to `SelectionNames` to keep the raw cut-flow.
+- **Statistical errors.** `RescaleSignal.py` explicitly enables `Sumw2` and the normal error option
+  before scaling, so a bin filled with `N` unweighted entries carries `w·√N`. `RescaleBKG.py` calls
+  `Scale` directly and relies on ROOT 6 enabling `Sumw2` by itself inside `TH1::Scale`.
+- **Luminosity.** The samples are weighted to 108.95 fb⁻¹, whereas `PlottingMacro.py` rescales the
+  signal overlays by `lumi / 109.0`, i.e. assumes 109.0 fb⁻¹: a 0.05 % mismatch, negligible but to
+  be kept in mind if either number changes. Only the signal overlays are rescaled when an era
+  (`F`, `G`) is selected; the MC stack always corresponds to the full 2024 luminosity.
+- **Only the MadGraph gluinos are read downstream.** `systSignal.py` and `PlottingMacro.py` both
+  point at `Gluino_Run3_MET_madgraph_<m>_V<vsignal>_weighted.root`. The other gluino set, the stops
+  and the staus are weighted but not consumed by any script here (`PlottingMacro.py` only keeps two
+  commented-out lines to overlay a stau or a stop point instead of a gluino one).
+- The complete sample list kept as a comment in `RescaleBKG.py` lacks a comma before its last entry
+  (`WjetMuNu2024`), so it cannot be un-commented as it stands: copy the block of the family you
+  need instead.
+
+---
+
+## 6. Step 2 — Running the background prediction
 
 ```bash
 python LaunchBkgPred.py                    # nominal only (fast path)
@@ -188,7 +322,7 @@ python LaunchBkgPred.py --only binEtaUp,fitIhDown
 `--only` wins over `--all`. An unknown label aborts immediately and prints the valid ones.
 The full sweep takes several hours — launch it inside a `screen` / `tmux` session.
 
-### 5.1 What the launcher does
+### 6.1 What the launcher does
 
 For every (dataset, variation) pair it:
 
@@ -204,7 +338,7 @@ On success the config file is deleted; on failure it is kept so the run can be r
 The macro echoes the whole parsed configuration into its log, which is then the only record of what
 a given output was produced with.
 
-### 5.2 Settings
+### 6.2 Settings
 
 Everything below is edited in the `common` dict at the top of `LaunchBkgPred.py`, except
 `datasetList`, `outputDir`, `etaRangeName`, `sampleTypeName` and `labelDir`, which sit just above
@@ -213,7 +347,7 @@ it.
 | Key | Values | Meaning |
 | --- | --- | --- |
 | `sample` | full path **without** `.root` | Input file. Set from `datasetList`. |
-| `sampleType` | `data2017` … `mc2024` | Selects `(K, C)`. Carried per dataset, so data and MC cannot be mixed up. |
+| `sampleType` | `data2017` … `mc2024`, `ttbar2024` | Selects `(K, C)`. Carried per dataset, so data and MC cannot be mixed up. `ttbar2024` has the `mc2024` constants: what it changes is the name of the working directory (`ttbar2024_V<version>__…`), used for the ttbar-only closure test of §9. |
 | `label` | free string, **must be unique** | Appended to the output file name. An empty label is a hard error. |
 | `nPE` | integer > 0 | Pseudo-experiments. Runtime scales linearly; use 20 for a quick test, 200 for a result. |
 | `rebin` | 0 \| 1 | Master switch. At 0 the step 1 histograms are used as they are and `rebinEta/Ih/Mom` are ignored. |
@@ -239,7 +373,7 @@ it.
 histogram names. Set both to 1 to get them together; running two separate passes does not work,
 because the output is opened `RECREATE` and the second pass overwrites the first.
 
-### 5.3 The systematic variations
+### 6.3 The systematic variations
 
 The `config` list holds one entry per variation, listing only the keys that change. The first entry
 is the nominal and is the one that runs without `--all`.
@@ -252,14 +386,14 @@ is the nominal and is the one that runs without `--all`.
 | `binMomUp` / `binMomDown` | `rebinMom = 1 / 4` | `1/p` binning granularity |
 | `fitIhUp` / `fitIhDown` | `fitIh = 2 / 0` | ±1σ on the `Ih` tail fit |
 | `fitMomUp` / `fitMomDown` | `fitMom = 2 / 0` | ±1σ on the `1/p` tail fit |
-| `noFit` | `useFit = 0` | cross-check: contribution of the fits |
+| `noFit` | `useFit = 0` | cross-check: contribution of the fits (not combined by `systBckg.py`, see §7) |
 | `corrTemplateIh` | `corrTemplateIh = 1` | `Fpixel` correlation of the `Ih` template |
 | `corrTemplate1oP` | `corrTemplate1oP = 1` | `Fpixel` correlation of the `1/p` template |
 
 The nominal binning and fit values live in the `nominal` dict: an entry in `config` only overrides
 what it mentions, everything else falls back there.
 
-### 5.4 Output
+### 6.4 Output
 
 One ROOT file per configuration, written **next to the input sample** (the `sample` key is a full
 path, so the output name is one too):
@@ -303,7 +437,7 @@ stronger check when a run looks suspicious.
 
 ---
 
-## 6. Step 3a — Background systematics
+## 7. Step 3a — Background systematics
 
 ```bash
 python3 systBckg.py
@@ -340,11 +474,15 @@ side would silently halve the envelope.
 | `FitP` | `fitMomUp` / `fitMomDown` | yes |
 | `CorrIh` | `corrTemplateIh` (one-sided) | yes |
 | `Corr1oP` | `corrTemplate1oP` (one-sided) | yes |
-| `NoFit` | `noFit` (one-sided) | **no** — cross-check only |
 
-The total is the quadratic sum of the sources flagged `inTotal`. Note that the statistical term is
-included, so the key `systTotalBinned` is really a *total* uncertainty, not a purely systematic one;
-keep that in mind when combining it downstream.
+The keys of this table, `Stat` excepted, are the values accepted by `--only`. The total is the
+quadratic sum of the sources flagged `inTotal` — all of them at present. Note that the statistical
+term is included, so the key `systTotalBinned` is really a *total* uncertainty, not a purely
+systematic one; keep that in mind when combining it downstream.
+
+The `noFit` variation is still produced by the launcher (§6.3) but is no longer in the
+`SYSTEMATICS` table of `systBckg.py`: it is neither plotted nor summed here. To look at it, plot
+that variation directly with `python ShowPlots.py --label noFit`.
 
 Outputs, under `<indir>/<systdir>/` (`systdir` defaults to `SystCombined`):
 
@@ -356,13 +494,13 @@ Outputs, under `<indir>/<systdir>/` (`systdir` defaults to `SystCombined`):
 
 ---
 
-## 7. Step 3b — Signal systematics
+## 8. Step 3b — Signal systematics
 
 ```bash
 python3 systSignal.py
 python3 systSignal.py --etas Eta1,Eta2p4 --region 9fp10
 python3 systSignal.py --masses 2000,2400,2600
-python3 systSignal.py --raw                # unweighted step1 files
+python3 systSignal.py --raw                # original step 1 files, not rescaled to the luminosity
 python3 systSignal.py --no-plots
 ```
 
@@ -374,6 +512,12 @@ Structurally parallel to `systBckg.py`, with three differences:
 2. **No normalisation.** The spectra keep their absolute yields, since the flat systematics are
    multiplicative on yields.
 3. **No statistical term.** Only the systematic sources are summed.
+
+The file of a mass point is `<IDIR>/Gluino_Run3_MET_madgraph_<mass>_V<vsignal>_weighted.root`, i.e.
+the luminosity-normalised copy written by `RescaleSignal.py` (§5); `IDIR`, `VSIGNAL` and `WEIGHTED`
+are set at the top of the script. `--raw` reads the original step 1 file instead (same name
+without `_weighted`). The relative uncertainties are the same either way, since the weight is
+common to the nominal and to its variations; only the stored `mass_nominal` changes scale.
 
 | Source | Variation suffixes | Value |
 | --- | --- | --- |
@@ -395,7 +539,7 @@ Mass points: 1100 → 2600 GeV. Outputs, under `--odir` (default `systSignal/`):
 
 ---
 
-## 8. Step 3c — Mass-spectrum plots
+## 9. Step 3c — Mass-spectrum plots
 
 ```bash
 python ShowPlots.py
@@ -415,6 +559,24 @@ combined file written by `systBckg.py` is required; if it is missing the region 
 rather than silently falling back to the nominal-only plot, which would look identical but mean
 something different.
 
+**MC mode.** `ShowPlots.py` passes `--isMC True` as soon as `SAMPLETYPE` starts with `mc` or
+`ttbar`. The "observation" is then the sum of the simulated processes, read from the
+luminosity-normalised files of §5, which lets the closure of the method be tested where the truth
+is known.
+
+**ttbar-only closure test.** Run step 2 on the dileptonic ttbar sample with `sampleType = ttbar2024`,
+then plot with `SAMPLETYPE = "ttbar2024"`, `DATASET` pointing at the same ttbar file, **and**
+`--ttbar` (or `ISTTBAR = True`). The two switches are independent: the sample type alone does not
+restrict the observation to ttbar. In this mode the prediction is **normalised to the integral of
+the observation** before being drawn. As committed, step 2 reads the raw step 1 file
+(`TTbar2024_V15p10`) whereas the observation comes from its `_weighted` copy, so the two are not
+on the same scale to begin with; the comparison is therefore shape-only and says nothing about the
+ABCD normalisation.
+
+> **Careful.** That normalisation is applied whenever `--isTTbar True` reaches the macro, whatever
+> the sample: `--ttbar` on a data or full-MC working directory silently scales the prediction to
+> the observation.
+
 | `PlottingMacro.py` option | Meaning |
 | --- | --- |
 | `--ifile` | Step 2 output file. |
@@ -426,7 +588,7 @@ something different.
 | `--systfile` | `sysTotBinned_<eta>_<region>.root`, key `systTotalBinned`. |
 | `--eta` | η range; drives the label drawn on the plot. |
 | `--isMC` | `True` = the "observation" is the stack of the simulated processes. |
-| `--isTTbar` | MC only: restrict the "observation" to the dileptonic tt̄. |
+| `--isTTbar` | MC only: restrict the "observation" to the dileptonic ttbar, and normalise the prediction to it. |
 | `--vsignal`, `--year`, `--era` | Signal version, year, and era (`""` = whole year, or `F` / `G`). |
 
 The figure has four pads: the spectra (log y, with the prediction band, the observed points, the
@@ -436,12 +598,13 @@ optional MC stack and the gluino overlays), an optional cumulative-ratio pad, th
 file name so two configurations cannot overwrite each other.
 
 > **Note.** `PlottingMacro.py` still contains hard-coded paths to the gluino samples (`Gluino_V19`)
-> and to the MC samples used in the stack (W+jets, tt̄ dileptonic and semileptonic, QCD). Update
-> them when the sample versions change.
+> and to the MC samples used in the stack (W+jets, ttbar dileptonic and semileptonic, QCD). All of
+> them are `_weighted.root` files produced at step 1b (§5). Update the paths when the sample
+> versions change.
 
 ---
 
-## 9. Expected input histograms (step 1)
+## 10. Expected input histograms (step 1)
 
 `loadHistograms()` reads, for each region name `region{A,B,C,D}_<FpixelRange><Ext>`:
 
@@ -476,7 +639,7 @@ first and reordering the blocks silently makes branches unreachable.
 
 ---
 
-## 10. Path conventions
+## 11. Path conventions
 
 The layout is built independently in three places and nothing enforces that they agree — a mismatch
 shows up as a "file not found" list rather than as a wrong plot. The three must produce the same
@@ -503,7 +666,7 @@ up with the points.
 
 ---
 
-## 11. Practical notes
+## 12. Practical notes
 
 - **Do not combine `TProcessExecutor` with `EnableImplicitMT`** — the CPU is over-subscribed
   (`nWorkers × nThreads`). Likewise, shell-level stdout redirection (`> log 2>&1`) breaks the forked

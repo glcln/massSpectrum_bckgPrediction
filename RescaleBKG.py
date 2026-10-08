@@ -39,7 +39,7 @@ crossSectionArray = {
 "Wjets2024_2J_pt400to600_V" + version + "9.root" : 3.099, # +/- 0.01935  # 4.87396e-05 * 63425.1
 "Wjets2024_2J_pt600_V" + version + "10.root" : 0.5259, # +/- 0.002768  # 8.27863e-06 * 63425.1
 
-"WjetMuNu2024_V" + version + ".root" : 20790, # +/- 90.5  #63425.1/3,
+"WjetMuNu2024_V" + version + ".root" : 20790, # +/- 90.5  #63425.1/3
 }
 
 

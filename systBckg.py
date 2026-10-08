@@ -48,7 +48,7 @@ tdrstyle.setTDRStyle()
 #   Settings: MUST match those of ShowPlots.py
 # ==================================================================
 # These reproduce, by hand, the path convention built by LaunchBkgPred.py.
-BASE       = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src"
+BASE       = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/outputHist"
 DATASET   = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35"
 #DATASET    = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/HistForBkg_MC_V3"
 SAMPLETYPE = "data2024"     # data2017|data2018|data2024|mc2017|mc2018|mc2024|ttbar2024
@@ -98,9 +98,6 @@ MAX_MASS = 4000
 #
 # One-sided entries are symmetrised inside systMass(): the single variation is
 # used as both sides, so max(|up|, |down|) reduces to that one deviation.
-#
-# NoFit is deliberately excluded from the total: it is a cross-check of how much
-# the tail fits contribute at all, not an independent source of uncertainty.
 SYSTEMATICS = [
     dict(key="Eta",      down="binEtaDown",      up="binEtaUp",
          legend="#eta binning",       legDown="#eta down",  legUp="#eta up",
@@ -128,7 +125,7 @@ SYSTEMATICS = [
 # Label of the reference run; must match the first entry of the launcher's list.
 NOMINAL_LABEL = "nominal"
 # Style of the statistical uncertainty, which is drawn alongside the systematics
-# and, unlike NoFit, does enter the total.
+# and does enter the total.
 STAT_STYLE    = dict(legend="Stat.", color=ROOT.kBlack, marker=20)
 
 
@@ -320,7 +317,6 @@ def systTotal(list_h, name):
 
 
 def binCenters(h):
-    # Un marker au centre de chaque bin non vide, sans barre.
     g = ROOT.TGraph()
     for i in range(1, h.GetNbinsX() + 1):
         c = h.GetBinContent(i)

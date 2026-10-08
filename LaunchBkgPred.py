@@ -46,7 +46,7 @@ datasetList = [
 
 # Root of the directory tree the outputs are filed into, plus the pieces used to
 # build the sub-directory names.
-outputDir      = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src"
+outputDir      = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/outputHist"
 etaRangeName   = "Eta2p4"
 sampleTypeName = "ttbar2024"
 labelDir       = "v2"
