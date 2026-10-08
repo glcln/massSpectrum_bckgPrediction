@@ -48,7 +48,7 @@ tdrstyle.setTDRStyle()
 #   Settings: MUST match those of ShowPlots.py
 # ==================================================================
 # These reproduce, by hand, the path convention built by LaunchBkgPred.py.
-BASE       = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/macros"
+BASE       = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src"
 DATASET   = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/JetMET2024_V12/JetMET2024_V12p35"
 #DATASET    = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/TupleAnalysis/output/HistForBkg_MC_V3"
 SAMPLETYPE = "data2024"     # data2017|data2018|data2024|mc2017|mc2018|mc2024|ttbar2024
