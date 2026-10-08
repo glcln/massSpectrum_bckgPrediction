@@ -76,7 +76,7 @@ pathBKG_Wjets + "Wjets2024_2J_pt40to100_V" + version + "6.root",
 pathBKG_Wjets + "Wjets2024_2J_pt100to200_V" + version + "7.root",
 pathBKG_Wjets + "Wjets2024_2J_pt200to400_V" + version + "8.root",
 pathBKG_Wjets + "Wjets2024_2J_pt400to600_V" + version + "9.root",
-pathBKG_Wjets + "Wjets2024_2J_pt600_V" + version + "10.root"
+pathBKG_Wjets + "Wjets2024_2J_pt600_V" + version + "10.root",
 
 pathBKG_Wjets + "WjetMuNu2024_V" + version + ".root",
 ]

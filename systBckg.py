@@ -518,7 +518,7 @@ def plotSummary(entries, total, xtitle, outDir, outTitle, eta, sampleTag, lumiLa
     frame = ROOT.TH1D(uniq("frameSummary"), "", 1, 0, MAX_MASS)
     frame.SetDirectory(0)
     frame.SetStats(0)
-    # 0.1 % to 2000 %: wide enough that a pathological variation stays on-plot.
+    # 6000: wide enough that a pathological variation stays on-plot.
     frame.SetMinimum(0.1)
     frame.SetMaximum(6000)
     frame.GetXaxis().SetTitle(xtitle)

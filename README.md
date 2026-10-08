@@ -77,7 +77,7 @@ mass mapping is sampled finely enough.
 | Template | Shape | Fit range | Used below/above |
 | --- | --- | --- | --- |
 | `Ih`, `useOldIhFit = 0` | Gaussian | `[1.1 × peak, 6]` MeV/cm | above `1.1 × peak` |
-| `Ih`, `useOldIhFit = 1` | legacy shape | `[3, 6]` MeV/cm | above `3.5` MeV/cm |
+| `Ih`, `useOldIhFit = 1` | Gaussian (same function, legacy range) | `[3, 6]` MeV/cm | above `3.5` MeV/cm |
 | `1/p`, `useOld1oPFit = 1` | `[0]·([1] + erf((log x − [2])/[3]))` | `[0, f × peak]`, `f` scanned over `0.9 … 0.5` until the fit converges | below `0.2 × f × peak` |
 | `1/p`, `useOld1oPFit = 0` | `0.5·(e^(ax²+bx) + e^(−ax²−bx)) − 1` | `[0, 0.6 × peak]` | below `0.2 × f × peak` |
 
@@ -148,7 +148,7 @@ Cloning requires an SSH key associated with your GitHub account
 (see [connecting-to-github-with-ssh-key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)):
 
 ```bash
-git clone -b master git@github.com:gcoulon/massSpectrum_bckgPrediction.git massSpectrum_bckgPrediction
+git clone -b main git@github.com:glcln/massSpectrum_bckgPrediction.git massSpectrum_bckgPrediction
 cd massSpectrum_bckgPrediction
 ```
 
@@ -335,8 +335,9 @@ For every (dataset, variation) pair it:
 4. collects the freshly written `.root` files and moves them into the destination directory.
 
 On success the config file is deleted; on failure it is kept so the run can be replayed verbatim.
-The macro echoes the whole parsed configuration into its log, which is then the only record of what
-a given output was produced with.
+The macro echoes the whole parsed configuration to the terminal. The launcher writes no log file,
+so once the config file is deleted nothing on disk records what a given output was produced with:
+keep the terminal output if that record matters (see §12 for the caveat on shell redirections).
 
 ### 6.2 Settings
 
@@ -360,7 +361,7 @@ it.
 | `etaRange` | `Eta1` \| `Eta1_2p4` \| `Eta2p4` \| `Eta1p2_2p2` \| `Eta1p2_2p4` | Must exist on the step 1 side. |
 | `eopCut` | `""` \| `0p1` | step 1 E/p cut. |
 | `sigmaPtCut` | `""` \| `0p5` | step 1 σ(pT)/pT cut. |
-| `useOldIhFit` | 0 \| 1 | Shape of the `Ih` tail fit (see the table in §1). |
+| `useOldIhFit` | 0 \| 1 | Range of the `Ih` tail fit; the function is a Gaussian in both cases (see the table in §1). |
 | `useOld1oPFit` | 0 \| 1 | Shape of the `1/p` tail fit. **Careful:** this does not appear in the output name, so two runs differing only by this setting overwrite each other. |
 | `saveFits` | 0 \| 1 | Dump every fit into `DebugFit/`. At 1 this is `nPE` files **per systematic** (200 × 14 = 2800 with `--all`). |
 | `takeAbsEta` | 0 \| 1 | Fold the templates onto `|η|` before the estimate. |
@@ -432,8 +433,8 @@ Main content of the file, with `<r>` = `8fp9` or `9fp10`:
 On success the very last line printed is `Done: <output>.root`. That sentinel is the reliable
 success test: `TFile::Open(…, "RECREATE")` creates the file on disk *before* the macro has any
 chance to fail, so the presence of an output file proves nothing. The launcher currently checks the
-ROOT exit code plus the appearance of fresh `.root` files; grepping the log for `Done:` is the
-stronger check when a run looks suspicious.
+ROOT exit code plus the appearance of fresh `.root` files; looking for `Done:` at the end of the
+terminal output is the stronger check when a run looks suspicious.
 
 ---
 
@@ -449,7 +450,10 @@ python3 systBckg.py --no-plots
 ```
 
 Set `BASE`, `DATASET`, `SAMPLETYPE`, `SUFFIX`, `CUTS`, `REGION` and `ERA` in the settings block at
-the top; every one of them can also be overridden from the command line.
+the top. Only `SUFFIX`, `CUTS`, `REGION` and `ERA` have a command-line equivalent (`--suffix`,
+`--cuts`, `--region`, `--era`). `DATASET` and `SAMPLETYPE` can only be changed in the file;
+`--indir` replaces the working directory otherwise built from `BASE`, `SAMPLETYPE` and the version,
+but the file prefix still comes from `DATASET`.
 
 The script opens the nominal file **and every variation file** produced at step 2, rebins them onto
 the analysis mass binning, folds under/overflow in, normalises each to unit area (so the comparison
@@ -482,7 +486,8 @@ systematic one; keep that in mind when combining it downstream.
 
 The `noFit` variation is still produced by the launcher (§6.3) but is no longer in the
 `SYSTEMATICS` table of `systBckg.py`: it is neither plotted nor summed here. To look at it, plot
-that variation directly with `python ShowPlots.py --label noFit`.
+that variation directly with `python ShowPlots.py --label noFit --ofile mass_plot_noFit`
+(`--ofile` keeps it from overwriting the nominal plot, see §9).
 
 Outputs, under `<indir>/<systdir>/` (`systdir` defaults to `SystCombined`):
 
@@ -544,15 +549,19 @@ Mass points: 1100 → 2600 GeV. Outputs, under `--odir` (default `systSignal/`):
 ```bash
 python ShowPlots.py
 python ShowPlots.py --etas Eta1,Eta1_2p4,Eta2p4
-python ShowPlots.py --label binEtaUp
+python ShowPlots.py --label binEtaUp --ofile mass_plot_binEtaUp
 python ShowPlots.py --syst
 python ShowPlots.py --dry-run              # print the commands without running them
 ```
 
 `ShowPlots.py` does no physics: it rebuilds the step 2 output path for the requested systematic
 label, optionally locates the combined-systematics file, and shells out to `PlottingMacro.py` once
-per η range. Set `DATASET`, `SAMPLETYPE`, `SUFFIX`, `CUTS`, `VSIGNAL`, `REGION`, `YEAR`, `ERA` and
-`ISTTBAR` in the block at the top; all of them can be overridden from the command line.
+per η range. Set `BASE`, `DATASET`, `SAMPLETYPE`, `SUFFIX`, `CUTS`, `VSIGNAL`, `REGION`, `YEAR`,
+`ERA` and `ISTTBAR` in the block at the top. `SUFFIX`, `CUTS`, `VSIGNAL`, `YEAR`, `ERA` and
+`ISTTBAR` have a command-line equivalent (`--suffix`, `--cuts`, `--vsignal`, `--year`, `--era`,
+`--ttbar`); `BASE`, `DATASET`, `SAMPLETYPE` and `REGION` can only be changed in the file. In
+particular there is no `--region` here although `systBckg.py` has one: after
+`systBckg.py --region 8fp9`, `REGION` has to be edited in `ShowPlots.py` to plot that region.
 
 Without `--syst` the band is the statistical uncertainty of the prediction alone. With `--syst` the
 combined file written by `systBckg.py` is required; if it is missing the region is **skipped**
@@ -594,8 +603,15 @@ ABCD normalisation.
 The figure has four pads: the spectra (log y, with the prediction band, the observed points, the
 optional MC stack and the gluino overlays), an optional cumulative-ratio pad, the bin-by-bin ratio
 `obs/pred`, and the pull `(N_obs − N_pred)/σ`. Three formats are written —
-`.pdf`, `.root` and `.C` — under `<indir>/<eta>/Plots_<region>/`, with every switch encoded in the
-file name so two configurations cannot overwrite each other.
+`.pdf`, `.root` and `.C` — under `<indir>/<eta>/Plots_<region>/`, named
+
+```
+<ofile>_region<region>_<year>_[onlyNominal][_wRatioR][_MC]_<eta>
+```
+
+The name encodes the region, the year, the nominal-only flag, the cumulative-ratio pad, the MC flag
+and the η range, but **not** `--label`, `--era` or `--ttbar`: plotting a systematic variation or a
+single era overwrites the nominal plot of the same directory unless `--ofile` is changed as well.
 
 > **Note.** `PlottingMacro.py` still contains hard-coded paths to the gluino samples (`Gluino_V19`)
 > and to the MC samples used in the stack (W+jets, ttbar dileptonic and semileptonic, QCD). All of

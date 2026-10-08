@@ -1,3 +1,10 @@
-DebugFit/*.root
-systSignal/
-logs/
+# Output directories: the folder is tracked (through its .gitkeep), its content is not
+DebugFit/*
+!DebugFit/.gitkeep
+systSignal/*
+!systSignal/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Python cache: never tracked
+__pycache__/

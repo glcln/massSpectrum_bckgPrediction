@@ -2,7 +2,7 @@
 
     python3 LaunchBkgPred.py              -> only nominal
     python3 LaunchBkgPred.py --all        -> all systematics
-    python3 LaunchBkgPred.py --only etaup,ihdown
+    python3 LaunchBkgPred.py --only binEtaUp,binIhDown
 """
 
 # =============================================================================
@@ -48,7 +48,7 @@ datasetList = [
 # build the sub-directory names.
 outputDir      = "/safe/ui3_1/cms/gcoulon/CMSSW_15_0_13_patch1/src/outputHist"
 etaRangeName   = "Eta2p4"
-sampleTypeName = "ttbar2024"
+sampleTypeName = "data2024"
 labelDir       = "v2"
 
 # Settings shared by every launch of this session.
@@ -79,7 +79,7 @@ common = dict(
 
     # Shape of the Ih template fit. 0|1
     #   0 = Gaussian fitted from 1.1 * max
-    #   1 = legacy fit, fixed start at Ih = 3 MeV/cm
+    #   1 = same fit, fixed start at Ih = 3 MeV/cm
     useOldIhFit     = 0,
 
     # Shape of the 1/p template fit. 0|1

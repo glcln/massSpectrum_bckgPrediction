@@ -1,5 +1,5 @@
 #!/usr/bin/python
-"""Runs the mass spectrum plotting (MyMacroMass.py).
+"""Runs the mass spectrum plotting (PlottingMacro.py).
 
     python3 ShowPlots.py
     python3 ShowPlots.py --etas Eta1,Eta1_2p4,Eta2p4

@@ -358,7 +358,7 @@ Region::~Region(){}
 //      later by the global ABCD normalisation);
 //   3. fit the tails of both spectra, where the statistics are too poor to be used
 //      bin by bin:
-//        - Ih : Gaussian (new) or the legacy shape, above ~the peak;
+//        - Ih : Gaussian, above ~the peak;
 //        - 1/p: erf-of-log (old) or cosh-like (new), below a fraction of the peak
 //                position, i.e. at *high* momentum;
 //   4. loop over every (1/p, Ih) bin pair, build the mass from the pair, and fill

@@ -14,11 +14,6 @@
 //  The macro is deliberately "one config file = one run = one output file": the
 //  systematic variations are driven entirely from outside, which keeps this file
 //  free of the manual comment/uncomment editing it used to require.
-//
-//  On success the last line printed is "Done: <output>.root". That sentinel is
-//  what the launcher greps for: checking the existence or the mtime of the output
-//  file is not reliable, because TFile::Open(..., "RECREATE") creates the file on
-//  disk before the macro has had any chance to fail.
 // =============================================================================
 
 #include <fstream>

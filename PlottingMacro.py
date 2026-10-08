@@ -269,13 +269,13 @@ def addHSyst(h, h_syst, hCorrBias):
         resU.SetBinContent(i, res.GetBinContent(i) + errorTotal)
     return (res, resD, resU)
 
-# Blinding: zeroes the content of every bin whose lower edge is above m.
+# Blinding: zeroes the content of every bin whose lower edge is at or above m.
 # The errors are deliberately left untouched, so a blinded point disappears from
 # the plot without leaving a stray error bar at zero.
 def blindAnyUp(h,m):
     for i in range (0,h.GetNbinsX()+1):
         mass = h.GetBinLowEdge(i)
-        if(mass>m): 
+        if(mass >= m): 
             h.SetBinContent(i,0)
 
 # Folds the overflow into the last bin, contents only. Used inside allSet, where
@@ -544,8 +544,18 @@ def main(argv):
         print(" syst. file: " + systfile)
 
         histoOfSyst = ifileSyst.Get("systTotalBinned")
-        if not histoOfSyst:
-            raise RuntimeError("'systTotalBinned' missing from " + systfile)
+        histoOfStat = ifileSyst.Get("Stat_binned")
+        if (not histoOfSyst) or (not histoOfStat):
+            raise RuntimeError("'systTotalBinned' or 'Stat_binned' missing from " + systfile)
+
+        # systTotalBinned already includes the statistical term, and addHSyst adds
+        # the bin errors of the prediction (same toy RMS): remove it here.
+        histoOfSyst = histoOfSyst.Clone("systOnlyBinned")
+        histoOfSyst.SetDirectory(0)
+        for i in range(0, histoOfSyst.GetNbinsX() + 2):
+            tot  = histoOfSyst.GetBinContent(i)
+            stat = histoOfStat.GetBinContent(i)
+            histoOfSyst.SetBinContent(i, math.sqrt(max(tot*tot - stat*stat, 0.0)))
 
         (pred, predD, predU) = addHSyst(pred, histoOfSyst, pred_noCorrBias)
         (pred_noBlind, pred_noBlindD, pred_noBlindU) = addHSyst(
@@ -554,8 +564,9 @@ def main(argv):
         # Fallback: the statistical uncertainty of the prediction stands in for
         # the systematics, so the plot can be made before the systematics run.
         print(" /!\\ only nominal")
-        histoOfSystnom = getNominalSyst(ifile, "mass_predBC_", region,
-                                        sizeRebinning, rebinning)
+        # No systematics: the stat is already in the bin errors of pred.
+        histoOfSystnom = pred.Clone("noSyst")
+        histoOfSystnom.Reset()
         (pred, predD, predU) = addHSyst(pred, histoOfSystnom, pred_noCorrBias)
         (pred_noBlind, pred_noBlindD, pred_noBlindU) = addHSyst(
             pred_noBlind, histoOfSystnom, pred_noCorrBias)

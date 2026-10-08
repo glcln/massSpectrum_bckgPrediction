@@ -825,9 +825,7 @@ bool bckgEstimate(const std::string& filename,
     // Multi-process executor: each toy runs in a forked process.
     // WARNING: EnableImplicitMT must NOT be active at the same time, otherwise the
     // CPU is heavily over-subscribed (nWorkers x nThreads).
-    // WARNING: shell-level stdout redirection (> log 2>&1) breaks the forked
-    // workers, which is why the Python launcher captures the output through
-    // subprocess instead.
+    // WARNING: shell-level stdout redirection (> log 2>&1) breaks the forked workers.
     ROOT::TProcessExecutor workers(nWorkers);
 
     // Shallow copies: only their histogram pointers are reassigned below.
